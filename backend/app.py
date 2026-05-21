@@ -59,12 +59,29 @@ init_admin()
 # Helper: Trigger Node.js Email Service
 def trigger_email_service(data):
     try:
-        url = f"http://localhost:{os.getenv('EMAIL_SERVICE_PORT', '5001')}/api/send-email"
+        # Determine service URL based on environment
+        is_local = False
+        try:
+            if request and request.host:
+                is_local = "localhost" in request.host or "127.0.0.1" in request.host
+        except Exception:
+            pass
+            
+        if is_local:
+            url = f"http://localhost:{os.getenv('EMAIL_SERVICE_PORT', '5001')}/api/send-email"
+        else:
+            # On Vercel, route through the public deployment URL
+            host = request.host_url if (request and request.host_url) else ""
+            if not host and os.getenv("VERCEL_URL"):
+                host = f"https://{os.getenv('VERCEL_URL')}/"
+            url = f"{host}api/send-email"
+            
+        print(f"Triggering email service at: {url}")
         response = requests.post(url, json=data, timeout=5)
         return response.json()
     except Exception as e:
-        print(f"Email Service Trigger Failed: {e}")
-        return None
+        print(f"Email Service Error: {e}")
+        return {"success": False, "error": str(e)}
 
 # --- FRONTEND ROUTES ---
 
@@ -375,15 +392,6 @@ def init_db():
         print(f"DB Init Failed: {e}")
 
 init_db()
-
-# Helper: Trigger Node.js Email Service
-def trigger_email_service(data):
-    try:
-        response = requests.post("http://localhost:5001/api/send-email", json=data, timeout=5)
-        return response.json()
-    except Exception as e:
-        print(f"Email Service Error: {e}")
-        return {"success": False, "error": str(e)}
 
 @app.route('/api/notifications/<user_id>', methods=['GET'])
 def get_notifications(user_id):

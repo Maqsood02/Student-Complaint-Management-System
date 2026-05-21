@@ -272,3 +272,5 @@ app.post('/api/send-email', async (req, res) => {
 app.listen(PORT, () => {
     console.log(`Email service running on port ${PORT}`);
 });
+
+module.exports = app;

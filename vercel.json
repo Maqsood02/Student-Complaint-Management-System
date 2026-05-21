@@ -16,8 +16,12 @@
   ],
   "routes": [
     {
+      "src": "/api/send-email",
+      "dest": "/backend/server.js"
+    },
+    {
       "src": "/api/(.*)",
-      "dest": "/backend/$1"
+      "dest": "/backend/app.py"
     },
     {
       "src": "/(.*)",
