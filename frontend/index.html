@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCMS | Student Complaint Management System</title>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="SCMS is a next-generation Student Complaint Management System designed for modern campuses. Streamlined, transparent, and built for efficiency.">
+    <meta name="keywords" content="SCMS, Student Complaint, Campus Management, University Portal">
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+    <!-- Authentication View -->
+    <div id="auth-view" class="view active">
+        <div class="auth-split">
+            <div class="auth-hero">
+                <div class="glow-blob blob-1"></div>
+                <div class="glow-blob blob-2"></div>
+                <div class="hero-overlay"></div>
+                <div class="hero-content animate-up">
+                    <div class="hero-brand">
+                        <img src="logo.png" alt="SCMS Logo" class="auth-logo" id="auth-hero-logo">
+                        <div class="brand-badge"><i class="fa-solid fa-shield-halved"></i> Campus Secured</div>
+                    </div>
+                    
+                    <h1 class="hero-title">
+                        Revolutionizing <span class="gradient-text">Campus Complaints</span>
+                    </h1>
+                    <p class="hero-description">
+                        Streamlined, transparent, and built for modern campus life. Submit, route, and resolve concerns in real-time.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Right Side Form Container -->
+            <div class="auth-container">
+                <div class="auth-card">
+                    
+                    <!-- Login Form -->
+                    <form id="login-form" class="auth-form active-form">
+                        <div class="auth-header-left">
+                            <h2>Welcome Back</h2>
+                            <p>Enter your credentials to access the portal.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-email">Email Address</label>
+                            <div class="input-icon">
+                                <i class="fa-regular fa-envelope"></i>
+                                <input type="email" id="login-email" placeholder="student@university.edu" required autocomplete="email">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="login-password">Password</label>
+                            <div class="input-icon">
+                                <i class="fa-solid fa-lock"></i>
+                                <input type="password" id="login-password" placeholder="••••••••" required autocomplete="current-password">
+                                <i class="fa-regular fa-eye toggle-password" data-target="login-password" style="position: absolute; right: 1.25rem; top: 50%; transform: translateY(-50%); cursor: pointer; opacity: 0.6;"></i>
+                            </div>
+                        </div>
+                        <div class="flex-between mt-1" style="font-size: 0.85rem;">
+                            <label class="checkbox-label" style="display: flex; align-items: center; gap: 8px; color: var(--text-muted); cursor: pointer;">
+                                <input type="checkbox" id="remember-me"> Remember me
+                            </label>
+                            <a href="#" id="show-forgot" style="color: var(--primary); font-weight: 700;">Forgot Password?</a>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block mt-2" id="login-submit-btn">
+                            Sign In <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                        </button>
+                        <p class="auth-switch">Don't have an account? <a href="#" id="show-register">Sign up</a></p>
+                    </form>
+
+                    <!-- Register Form -->
+                    <form id="register-form" class="auth-form">
+                        <div class="auth-header-left">
+                            <h2>Create Account</h2>
+                            <p>Join the SCMS portal to start raising complaints.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-name">Full Name</label>
+                            <div class="input-icon">
+                                <i class="fa-regular fa-user"></i>
+                                <input type="text" id="reg-name" placeholder="John Doe" required autocomplete="name">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-email">Email Address</label>
+                            <div class="input-icon">
+                                <i class="fa-regular fa-envelope"></i>
+                                <input type="email" id="reg-email" placeholder="student@university.edu" required autocomplete="email">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-password">Password</label>
+                            <div class="input-icon">
+                                <i class="fa-solid fa-lock"></i>
+                                <input type="password" id="reg-password" placeholder="••••••••" required autocomplete="new-password">
+                                <i class="fa-regular fa-eye toggle-password" data-target="reg-password" style="position: absolute; right: 1.25rem; top: 50%; transform: translateY(-50%); cursor: pointer; opacity: 0.6;"></i>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-confirm-password">Confirm Password</label>
+                            <div class="input-icon">
+                                <i class="fa-solid fa-shield-check"></i>
+                                <input type="password" id="reg-confirm-password" placeholder="••••••••" required autocomplete="new-password">
+                                <i class="fa-regular fa-eye toggle-password" data-target="reg-confirm-password" style="position: absolute; right: 1.25rem; top: 50%; transform: translateY(-50%); cursor: pointer; opacity: 0.6;"></i>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block mt-1" id="register-submit-btn">
+                            Create Account <i class="fa-solid fa-user-plus"></i>
+                        </button>
+                        <p class="auth-switch">Already have an account? <a href="#" id="show-login">Sign in</a></p>
+                    </form>
+
+                    <!-- OTP Form -->
+                    <form id="otp-form" class="auth-form">
+                        <div class="auth-header-left">
+                            <h2>Verify Email</h2>
+                            <p>Sent a 6-digit code to <span id="otp-display-email" class="text-primary" style="font-weight: 700;"></span></p>
+                            <p id="otp-timer-container" style="font-size: 0.85rem; margin-top: 10px; color: var(--text-muted);">
+                                Code expires in: <span id="otp-timer" style="color: var(--danger); font-weight: 700;">01:00</span>
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <label for="otp-input">Enter OTP Code</label>
+                            <div class="input-icon">
+                                <i class="fa-solid fa-key"></i>
+                                <input type="text" id="otp-input" placeholder="000000" maxlength="6" style="text-align: center; letter-spacing: 10px; font-weight: 800;">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block" id="otp-verify-btn">
+                            Verify & Continue <i class="fa-solid fa-circle-check"></i>
+                        </button>
+                        <p class="auth-switch"><a href="#" id="resend-otp">Resend</a> or <a href="#" id="back-to-register">Go Back</a></p>
+                    </form>
+
+                    <!-- Forgot Password Form -->
+                    <form id="forgot-form" class="auth-form">
+                        <div class="auth-header-left">
+                            <h2>Reset Password</h2>
+                            <p>Enter your email to receive a password reset code.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="forgot-email">Email Address</label>
+                            <div class="input-icon">
+                                <i class="fa-regular fa-envelope"></i>
+                                <input type="email" id="forgot-email" placeholder="student@university.edu" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block mt-1" id="forgot-submit-btn">
+                            Send Reset Code <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                        <p class="auth-switch"><a href="#" id="back-to-login">Back to Login</a></p>
+                    </form>
+
+                    <!-- Reset Password Form -->
+                    <form id="reset-password-form" class="auth-form">
+                        <div class="auth-header-left">
+                            <h2>New Password</h2>
+                            <p>Enter the code sent to your email and set a new password.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="reset-code">Reset Code</label>
+                            <div class="input-icon">
+                                <i class="fa-solid fa-key"></i>
+                                <input type="text" id="reset-code" placeholder="000000" required style="text-align: center; letter-spacing: 5px;">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-password">New Password</label>
+                            <div class="input-icon">
+                                <i class="fa-solid fa-lock"></i>
+                                <input type="password" id="new-password" placeholder="••••••••" required>
+                                <i class="fa-regular fa-eye toggle-password" data-target="new-password" style="position: absolute; right: 1.25rem; top: 50%; transform: translateY(-50%); cursor: pointer; opacity: 0.6;"></i>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block mt-1" id="reset-password-submit-btn">
+                            Update Password <i class="fa-solid fa-shield-halved"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application View -->
+    <div id="app-view" class="view">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="main-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-logo-container">
+                    <img src="logo.png" alt="SCMS Logo" class="sidebar-logo">
+                </div>
+            </div>
+            
+            <ul class="nav-links" id="student-nav">
+                <li class="nav-label">Portal</li>
+                <li><a href="#" class="nav-link active" data-target="student-dashboard" id="nav-stu-dashboard"><i class="fa-solid fa-house-chimney"></i> Dashboard</a></li>
+                <li><a href="#" class="nav-link" data-target="submit-complaint" id="nav-stu-file"><i class="fa-solid fa-file-pen"></i> File Complaint</a></li>
+                <li><a href="#" class="nav-link" data-target="track-complaints" id="nav-stu-track"><i class="fa-solid fa-clock-rotate-left"></i> Track History</a></li>
+            </ul>
+
+            <ul class="nav-links hidden" id="admin-nav">
+                <li class="nav-label">Administration</li>
+                <li><a href="#" class="nav-link active" data-target="admin-dashboard" id="nav-adm-dashboard"><i class="fa-solid fa-chart-pie"></i> Overview</a></li>
+                <li><a href="#" class="nav-link" data-target="manage-complaints" id="nav-adm-manage"><i class="fa-solid fa-list-check"></i> Management</a></li>
+                <li><a href="#" class="nav-link" data-target="register-users" id="nav-adm-register"><i class="fa-solid fa-user-plus"></i> Register Users</a></li>
+                <li><a href="#" class="nav-link" data-target="manage-users" id="nav-adm-users"><i class="fa-solid fa-user-gear"></i> Manage Accounts</a></li>
+            </ul>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="main-content-area">
+            <!-- Top Navigation Bar -->
+                <nav class="top-nav animate-up">
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <button id="mobile-toggle" class="ui-action" style="display: none;" title="Toggle Sidebar">
+                            <i class="fa-solid fa-bars"></i>
+                        </button>
+                        <div class="search-bar">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" placeholder="Search complaints..." id="global-search">
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1.5rem; align-items: center;">
+                        <div class="ui-action theme-toggle" id="theme-toggle" title="Toggle Mode">
+                            <i class="fa-solid fa-moon"></i>
+                        </div>
+                        <div class="ui-action notification" id="notification-bell" style="position: relative;">
+                            <i class="fa-solid fa-bell"></i>
+                            <span id="notification-badge" class="badge" style="display: none; position: absolute; top: -5px; right: -5px; background: var(--danger); color: white; border-radius: 50%; width: 18px; height: 18px; font-size: 0.65rem; font-weight: 900; align-items: center; justify-content: center; border: 2px solid var(--bg-card);">0</span>
+                        </div>
+                        <div class="user-profile-wrapper">
+                            <div class="user-profile" id="user-profile-widget">
+                                <img src="https://ui-avatars.com/api/?name=User&background=6366f1&color=fff&bold=true" alt="Avatar" id="user-avatar">
+                                <div class="user-info">
+                                    <span class="user-name" id="display-user-name">Maqsood MD</span>
+                                    <span class="user-role">Student Scholar</span>
+                                </div>
+                                <i class="fa-solid fa-chevron-down profile-chevron"></i>
+                            </div>
+                            <div class="profile-dropdown" id="profile-dropdown">
+                                <div class="dropdown-header">
+                                    <span class="dropdown-name" id="dropdown-user-name">Maqsood MD</span>
+                                    <span class="dropdown-email" id="dropdown-user-email">student@university.edu</span>
+                                </div>
+                                <div class="dropdown-divider"></div>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a href="#" id="dropdown-action-btn">
+                                            <i class="fa-solid fa-gauge-high"></i>
+                                            <span>Dashboard Home</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" id="dropdown-theme-toggle">
+                                            <i class="fa-solid fa-circle-half-stroke"></i>
+                                            <span>Change Theme</span>
+                                        </a>
+                                    </li>
+                                    <div class="dropdown-divider"></div>
+                                    <li>
+                                        <a href="#" id="dropdown-logout-btn" class="logout-link">
+                                            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                                            <span>Sign Out</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="ui-action" id="logout-btn" style="color: var(--danger); background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.1);" title="Sign Out">
+                            <i class="fa-solid fa-power-off"></i>
+                        </div>
+                    </div>
+                </nav>
+
+            <!-- Dynamic Page Content -->
+            <div class="page-content" id="page-content-wrapper">
+                
+                <!-- STUDENT DASHBOARD SECTION -->
+                <section id="student-dashboard" class="page-section active">
+                    <div class="section-header animate-up">
+                        <h1>My Dashboard</h1>
+                        <p>Track your active and resolved complaints.</p>
+                    </div>
+
+                    <div class="stats-grid">
+                        <div class="stat-card animate-up">
+                            <div class="stat-icon-wrapper" style="color: #6366f1; background: rgba(99, 102, 241, 0.1);">
+                                <i class="fa-solid fa-folder-tree"></i>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Total Complaints</h3>
+                                <p class="stat-number" id="stu-total-count">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card animate-up delay-1">
+                            <div class="stat-icon-wrapper" style="color: #f59e0b; background: rgba(245, 158, 11, 0.1);">
+                                <i class="fa-solid fa-hourglass-half"></i>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Active Pending</h3>
+                                <p class="stat-number" id="stu-pending-count">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card animate-up delay-2">
+                            <div class="stat-icon-wrapper" style="color: #10b981; background: rgba(16, 185, 129, 0.1);">
+                                <i class="fa-solid fa-shield-check"></i>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Successfully Resolved</h3>
+                                <p class="stat-number" id="stu-resolved-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-card animate-up delay-3">
+                        <div class="card-header">
+                            <h3>Recent System Activity</h3>
+                            <button class="btn btn-primary" onclick="document.getElementById('nav-stu-track').click()">Review All <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Complaint ID</th>
+                                        <th>Complaint Subject</th>
+                                        <th>Category</th>
+                                        <th>Date Submitted</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stu-recent-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FILE COMPLAINT SECTION -->
+                <section id="submit-complaint" class="page-section">
+                    <div class="section-header animate-up">
+                        <h1>Create Official Complaint</h1>
+                        <p>Submit your concerns through our high-priority resolution channel.</p>
+                    </div>
+
+                    <div class="content-card animate-up" style="max-width: 1000px; margin: 0 auto; padding: 3rem;">
+                        <form id="complaint-form" style="display: flex; flex-direction: column; gap: 2rem;">
+                            
+                            <!-- Row 1: Classification & Urgency Side-by-Side -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                                <div class="form-group">
+                                    <label>Complaint Classification *</label>
+                                    <div class="input-icon">
+                                        <i class="fa-solid fa-layer-group"></i>
+                                        <select id="comp-category" required>
+                                            <option value="" disabled selected>Select appropriate category</option>
+                                            <option value="Hostel">Hostel & Accommodation</option>
+                                            <option value="Transport">Campus Transport</option>
+                                            <option value="Academics">Academic Affairs</option>
+                                            <option value="Classroom Maintenance">Classroom & Infrastructure</option>
+                                            <option value="Library">Library Services</option>
+                                            <option value="Technical">IT & Technical Support</option>
+                                            <option value="Cafeteria">Cafeteria & Dining</option>
+                                            <option value="Other">Miscellaneous Concern</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group" id="priority-group">
+                                    <label>Urgency Level</label>
+                                    <div class="input-icon">
+                                        <i class="fa-solid fa-bolt-lightning"></i>
+                                        <select id="comp-priority-user">
+                                            <option value="Low">Low - Normal Inquiry</option>
+                                            <option value="Medium" selected>Medium - Requires Attention</option>
+                                            <option value="High">High - Critical Priority</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 2 (Dynamic): Facility Location (Classroom Maintenance Only) -->
+                            <div class="form-group hidden animate-up" id="classroom-group">
+                                <label>Facility Location *</label>
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+                                    <div class="input-icon">
+                                        <i class="fa-solid fa-building-user"></i>
+                                        <select id="comp-dept">
+                                            <option value="CSE">CSE Building</option>
+                                            <option value="ECE">ECE Block</option>
+                                            <option value="MECH">MECH Workshop</option>
+                                            <option value="CIVIL">CIVIL Dept</option>
+                                            <option value="MBA">Management Block</option>
+                                            <option value="S&H">S&H Block</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-icon">
+                                        <i class="fa-solid fa-door-open"></i>
+                                        <select id="comp-classroom">
+                                            <option value="" disabled selected>Select Room Number</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Row 3: Full Width Title -->
+                            <div class="form-group">
+                                <label>Complaint Title *</label>
+                                <div class="input-icon">
+                                    <i class="fa-solid fa-heading"></i>
+                                    <input type="text" id="comp-title" placeholder="Briefly summarize your complaint (e.g., AC not working in C-009)" required>
+                                </div>
+                            </div>
+
+                            <!-- Row 4: Full Width Narrative Textarea -->
+                            <div class="form-group">
+                                <label>Detailed Narrative *</label>
+                                <textarea id="comp-description" placeholder="Provide a comprehensive description of the issue, including time, location, and any previous attempts at resolution..." required></textarea>
+                            </div>
+
+                            <!-- Row 5: Evidence Full-Width -->
+                            <div class="form-group">
+                                <label>Supportive Evidence *</label>
+                                <div class="file-upload-zone" id="drop-zone" onclick="document.getElementById('comp-file').click()" style="padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; background: rgba(99, 102, 241, 0.02); border: 2px dashed rgba(99, 102, 241, 0.15); border-radius: var(--radius-md); cursor: pointer; transition: all 0.3s ease;">
+                                    <div class="file-upload-icon" style="font-size: 2.25rem; margin: 0; color: var(--primary);"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                                    <h4 id="file-name-display" style="margin: 0; font-weight: 800; font-size: 0.95rem; color: var(--text-main);">Drop files or click to browse</h4>
+                                    <p style="color: var(--text-muted); font-size: 0.75rem; margin: 0;">High-resolution images or PDF (Max 5MB) - Mandatory</p>
+                                    <input type="file" id="comp-file" hidden accept="image/*,application/pdf" onchange="document.getElementById('file-name-display').innerText = this.files.length > 0 ? 'Selected: ' + this.files[0].name : 'Drop files or click to browse'; document.getElementById('file-name-display').style.color = this.files.length > 0 ? 'var(--success)' : 'var(--text-main)';">
+                                </div>
+                            </div>
+
+                            <!-- BOTTOM BUTTON ACTIONS -->
+                            <div class="form-actions" style="display: flex; justify-content: flex-end; gap: 1.5rem; border-top: 1px dashed var(--border); padding-top: 2rem; margin-top: 1rem;">
+                                <button type="reset" class="btn btn-secondary" style="padding: 0.85rem 2rem; border-radius: 100px; font-weight: 700; font-size: 0.95rem; background: rgba(100, 116, 139, 0.06); border: 1px solid var(--border); color: var(--text-muted); cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px;">
+                                    <i class="fa-solid fa-trash-can"></i> Discard Draft
+                                </button>
+                                <button type="submit" class="btn btn-primary" style="padding: 0.85rem 2rem; border-radius: 100px; font-weight: 700; font-size: 0.95rem; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; border: none; cursor: pointer; transition: var(--transition); display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px -3px rgba(99, 102, 241, 0.3);">
+                                    Transmit Complaint <i class="fa-solid fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- TRACK HISTORY SECTION -->
+                <section id="track-complaints" class="page-section">
+                    <div class="section-header">
+                        <h1>Track History</h1>
+                        <p>View the status and history of your complaints.</p>
+                    </div>
+                    <div class="content-card">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Complaint ID</th>
+                                        <th>Complaint Subject</th>
+                                        <th>Category</th>
+                                        <th>Date Submitted</th>
+                                        <th>Status</th>
+                                        <th>Details</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="stu-track-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ADMIN DASHBOARD SECTION -->
+                <section id="admin-dashboard" class="page-section">
+                    <div class="section-header animate-up">
+                        <h1>System Intelligence Overview</h1>
+                        <p>Real-time analytics and strategic complaint monitoring.</p>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card animate-up">
+                            <div class="stat-icon-wrapper" style="color: #6366f1; background: rgba(99, 102, 241, 0.1);">
+                                <i class="fa-solid fa-file-signature"></i>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Cumulative Complaints</h3>
+                                <p class="stat-number" id="adm-total-count">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card animate-up delay-1">
+                            <div class="stat-icon-wrapper" style="color: #f59e0b; background: rgba(245, 158, 11, 0.1);">
+                                <i class="fa-solid fa-timer"></i>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Pending Approval</h3>
+                                <p class="stat-number" id="adm-pending-count">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card animate-up delay-2">
+                            <div class="stat-icon-wrapper" style="color: #3b82f6; background: rgba(59, 130, 246, 0.1);">
+                                <i class="fa-solid fa-microchip-ai"></i>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Processing Now</h3>
+                                <p class="stat-number" id="adm-progress-count">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card animate-up delay-3">
+                            <div class="stat-icon-wrapper" style="color: #10b981; background: rgba(16, 185, 129, 0.1);">
+                                <i class="fa-solid fa-hexagon-check"></i>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Resolved Issues</h3>
+                                <p class="stat-number" id="adm-resolved-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-card animate-up delay-4">
+                        <div class="card-header">
+                            <h3>High-Priority Action Items</h3>
+                            <button class="btn btn-primary" onclick="document.getElementById('nav-adm-manage').click()">Go to Management <i class="fa-solid fa-arrow-right"></i></button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Complaint ID</th>
+                                        <th>Student</th>
+                                        <th>Subject</th>
+                                        <th>Category</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adm-recent-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ADMIN MANAGEMENT SECTION -->
+                <section id="manage-complaints" class="page-section">
+                    <div class="section-header">
+                        <h1>Complaint Management</h1>
+                        <p>Review student issues and provide official resolutions.</p>
+                    </div>
+                    <div class="content-card">
+                        <div class="card-header">
+                            <div class="filter-group">
+                                <select id="adm-filter-status" class="btn" style="padding: 0.5rem 1rem; font-size: 0.85rem; border: 1px solid var(--border); background: var(--bg-app);">
+                                    <option value="All">All Statuses</option>
+                                    <option value="Pending">Pending</option>
+                                    <option value="In Progress">In Progress</option>
+                                    <option value="Resolved">Resolved</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Complaint ID</th>
+                                        <th>Student</th>
+                                        <th>Department</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adm-manage-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ADMIN REGISTER USERS SECTION -->
+                <section id="register-users" class="page-section">
+                    <div class="section-header animate-up">
+                        <h1>Register Users</h1>
+                        <p>Manually create new user accounts for students or administrators.</p>
+                    </div>
+                    <div class="content-card animate-up" style="max-width: 500px; margin: 0 auto; padding: 2rem;">
+                        <form id="admin-create-user-form">
+                            <div class="form-group">
+                                <label for="adm-user-name">Full Name</label>
+                                <div class="input-icon">
+                                    <i class="fa-regular fa-user"></i>
+                                    <input type="text" id="adm-user-name" placeholder="E.g., Jane Smith" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="adm-user-email">Email Address</label>
+                                <div class="input-icon">
+                                    <i class="fa-regular fa-envelope"></i>
+                                    <input type="email" id="adm-user-email" placeholder="E.g., janesmith@university.edu" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="adm-user-password">Password</label>
+                                <div class="input-icon">
+                                    <i class="fa-solid fa-lock"></i>
+                                    <input type="password" id="adm-user-password" placeholder="••••••••" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="adm-user-role">User Role</label>
+                                <select id="adm-user-role" class="btn" style="width: 100%; text-align: left; padding: 0.75rem 1.25rem; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.95rem; font-weight: 600; background: var(--bg-input); color: var(--text-main); margin-bottom: 1.5rem;">
+                                    <option value="student">Student</option>
+                                    <option value="admin">Administrator</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-block">
+                                Register Account <i class="fa-solid fa-user-plus"></i>
+                            </button>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- ADMIN MANAGE USERS SECTION -->
+                <section id="manage-users" class="page-section">
+                    <div class="section-header animate-up">
+                        <h1>Manage User Accounts</h1>
+                        <p>View, search, or delete user accounts on the platform.</p>
+                    </div>
+                    <div class="content-card animate-up">
+                        <div class="card-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                            <h3>User Directory</h3>
+                            <div class="search-bar" style="max-width: 300px; width: 100%;">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input type="text" placeholder="Search by name or email..." id="adm-search-users">
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Email</th>
+                                        <th>Role</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adm-users-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals & Overlays -->
+    <div id="modal-overlay" class="modal-overlay">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3 id="modal-title">Complaint Details</h3>
+                <button class="close-modal" id="close-modal" aria-label="Close Modal"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="modal-content"></div>
+            <div class="modal-footer" id="modal-actions"></div>
+        </div>
+    </div>
+
+    <div id="toast-container"></div>
+
+    <!-- Lightbox for Images -->
+    <div id="lightbox" class="modal-overlay" style="background: rgba(0,0,0,0.95); cursor: zoom-out;" onclick="this.classList.remove('active')">
+        <img id="lightbox-img" src="" alt="Full size preview" style="max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,0.5);">
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
