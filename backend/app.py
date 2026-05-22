@@ -651,5 +651,69 @@ def admin_delete_user(user_id):
         if conn:
             conn.close()
 
+@app.route('/api/complaints/<string:complaint_id>', methods=['DELETE'])
+def delete_complaint(complaint_id):
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 1. Delete notifications related to the complaint
+        cursor.execute("DELETE FROM notifications WHERE complaint_id = %s", (complaint_id,))
+        
+        # 2. Delete the complaint itself
+        cursor.execute("DELETE FROM complaints WHERE id = %s", (complaint_id,))
+        
+        conn.commit()
+        return jsonify({"success": True, "message": "Complaint deleted successfully"})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+@app.route('/api/change-password', methods=['POST'])
+def change_password():
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        current_password = data.get('currentPassword')
+        new_password = data.get('newPassword')
+
+        if not user_id or not current_password or not new_password:
+            return jsonify({"success": False, "message": "Missing fields"}), 400
+
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT password FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        
+        if not user:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "User not found"}), 404
+
+        # Verify current password
+        if not bcrypt.check_password_hash(user['password'], current_password):
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Incorrect current password"}), 401
+
+        # Hash and update new password
+        hashed_pw = bcrypt.generate_password_hash(new_password).decode('utf-8')
+        cursor.execute("UPDATE users SET password = %s WHERE id = %s", (hashed_pw, user_id))
+        conn.commit()
+        
+        cursor.close()
+        conn.close()
+        return jsonify({"success": True, "message": "Password updated successfully"})
+    except Exception as e:
+        print(f"CHANGE PASSWORD ERROR: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
+

@@ -166,6 +166,7 @@ function setupEventListeners() {
     document.getElementById('forgot-form').addEventListener('submit', handleForgotSubmit);
     document.getElementById('reset-password-form').addEventListener('submit', handleResetPassword);
     complaintForm.addEventListener('submit', handleComplaintSubmit);
+    document.getElementById('change-password-form')?.addEventListener('submit', handleChangePasswordSubmit);
 
     // Sidebar Navigation
     navLinks.forEach(link => {
@@ -179,7 +180,18 @@ function setupEventListeners() {
         });
     });
 
-    mobileToggle?.addEventListener('click', () => sidebar.classList.toggle('active'));
+    mobileToggle?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sidebar.classList.toggle('active');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (window.innerWidth <= 1024 && sidebar.classList.contains('active')) {
+            if (!sidebar.contains(e.target) && !mobileToggle.contains(e.target)) {
+                sidebar.classList.remove('active');
+            }
+        }
+    });
 
     document.getElementById('logout-btn').addEventListener('click', logout);
 
@@ -866,6 +878,7 @@ window.manageComplaint = (id) => {
     `;
 
     modalActions.innerHTML = `
+        <button class="btn btn-danger" style="margin-right: auto;" onclick="deleteComplaint('${id}')"><i class="fa-solid fa-trash-can"></i> Delete Complaint</button>
         <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">Discard</button>
         <button class="btn btn-primary btn-save-resolution" onclick="submitAdminUpdate('${id}')"><i class="fa-solid fa-check-circle"></i> Save & Notify Student</button>
     `;
@@ -937,70 +950,7 @@ function renderStudentView(complaints) {
     });
 }
 
-function renderAdminView(complaints) {
-    const statsSource = allComplaints.length > 0 ? allComplaints : complaints;
-    const total = statsSource.length;
-    const pending = statsSource.filter(c => c.status === 'Pending').length;
-    const resolved = statsSource.filter(c => c.status === 'Resolved').length;
-    const progress = statsSource.filter(c => c.status === 'In Progress').length;
 
-    document.getElementById('adm-total-count').textContent = total;
-    document.getElementById('adm-pending-count').textContent = pending;
-    document.getElementById('adm-resolved-count').textContent = resolved;
-    document.getElementById('adm-progress-count').textContent = progress;
-
-    const recentBody = document.getElementById('adm-recent-table-body');
-    const manageBody = document.getElementById('adm-manage-table-body');
-    recentBody.innerHTML = '';
-    manageBody.innerHTML = '';
-
-    // High‑Priority Recent Action Items (first 5)
-    const highPriorityFirst = [...complaints].sort((a, b) => {
-        const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
-        return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
-    });
-    highPriorityFirst.slice(0, 5).forEach(c => {
-        const statusClass = c.status.toLowerCase().replace(/\s+/g, '');
-        const priorityClass = c.priority.toLowerCase();
-        recentBody.innerHTML += `
-            <tr class="animate-up">
-                <td class="nowrap"><strong style="color: var(--primary);">#${c.id}</strong></td>
-                <td class="nowrap">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(c.student_name)}&background=random&color=fff&bold=true&size=36" style="border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                        <span style="font-weight: 700;">${c.student_name}</span>
-                    </div>
-                </td>
-                <td><span style="font-weight: 700;">${c.title}</span></td>
-                <td><span style="opacity: 0.8;">${c.category}</span></td>
-                <td class="nowrap"><span class="priority-badge ${priorityClass}"><i class="fa-solid fa-circle" style="font-size: 0.45rem;"></i> ${c.priority}</span></td>
-                <td class="nowrap"><span class="status-badge status-${statusClass}">${c.status}</span></td>
-            </tr>
-        `;
-    });
-
-    // Management Table – exclude the items already shown in recent (first 5)
-    highPriorityFirst.slice(5).forEach(c => {
-        const statusClass = c.status.toLowerCase().replace(/\s+/g, '');
-        const priorityClass = c.priority.toLowerCase();
-        manageBody.innerHTML += `
-            <tr class="animate-up">
-                <td class="nowrap"><strong style="color: var(--primary);">#${c.id}</strong></td>
-                <td class="nowrap">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(c.student_name)}&background=random&color=fff&bold=true&size=36" style="border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                        <span style="font-weight: 700;">${c.student_name}</span>
-                    </div>
-                </td>
-                <td><span style="font-weight: 700;">${c.title}</span></td>
-                <td><span style="opacity: 0.8;">${c.category}</span></td>
-                <td class="nowrap"><span class="priority-badge ${priorityClass}"><i class="fa-solid fa-circle" style="font-size: 0.45rem;"></i> ${c.priority}</span></td>
-                <td class="nowrap"><span class="status-badge status-${statusClass}">${c.status}</span></td>
-                <td class="nowrap"><button class="btn btn-primary" onclick="manageComplaint('${c.id}')" style="padding: 0.45rem 1.25rem; font-size: 0.8rem;">Review <i class="fa-solid fa-sliders"></i></button></td>
-            </tr>
-        `;
-    });
-}
 
 function renderAdminView(complaints) {
     const statsSource = allComplaints.length > 0 ? allComplaints : complaints;
@@ -1265,4 +1215,73 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+async function handleChangePasswordSubmit(e) {
+    e.preventDefault();
+    const currentPassword = document.getElementById('security-current-password').value;
+    const newPassword = document.getElementById('security-new-password').value;
+    const confirmPassword = document.getElementById('security-confirm-password').value;
+
+    if (newPassword !== confirmPassword) {
+        return showToast('New passwords do not match!', 'danger');
+    }
+
+    const submitBtn = document.getElementById('change-pwd-btn');
+    const originalText = submitBtn.innerHTML;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i> Updating...`;
+
+    try {
+        const res = await fetch(`${API_BASE}/change-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: currentUser.id,
+                currentPassword,
+                newPassword
+            })
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Password updated successfully!', 'success');
+            document.getElementById('change-password-form').reset();
+            if (currentUser.role === 'admin') {
+                document.getElementById('nav-adm-dashboard')?.click();
+            } else {
+                document.getElementById('nav-stu-dashboard')?.click();
+            }
+        } else {
+            showToast(data.message || 'Password update failed.', 'danger');
+        }
+    } catch (err) {
+        showToast('Server connection failed.', 'danger');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+}
+
+async function deleteComplaint(id) {
+    if (!confirm(`Are you sure you want to permanently delete complaint #${id}? This action cannot be undone.`)) {
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/complaints/${id}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Complaint deleted successfully!', 'success');
+            document.getElementById('modal-overlay').classList.remove('active');
+            refreshData();
+        } else {
+            showToast(data.message || 'Failed to delete complaint.', 'danger');
+        }
+    } catch (err) {
+        showToast('Server error. Could not delete complaint.', 'danger');
+    }
+}
+
+// Expose globally for inline onclick
+window.deleteComplaint = deleteComplaint;
 

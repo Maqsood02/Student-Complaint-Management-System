@@ -207,6 +207,7 @@
                 <li><a href="#" class="nav-link active" data-target="student-dashboard" id="nav-stu-dashboard"><i class="fa-solid fa-house-chimney"></i> Dashboard</a></li>
                 <li><a href="#" class="nav-link" data-target="submit-complaint" id="nav-stu-file"><i class="fa-solid fa-file-pen"></i> File Complaint</a></li>
                 <li><a href="#" class="nav-link" data-target="track-complaints" id="nav-stu-track"><i class="fa-solid fa-clock-rotate-left"></i> Track History</a></li>
+                <li><a href="#" class="nav-link" data-target="security-settings" id="nav-stu-security"><i class="fa-solid fa-shield-halved"></i> Security</a></li>
             </ul>
 
             <ul class="nav-links hidden" id="admin-nav">
@@ -215,6 +216,7 @@
                 <li><a href="#" class="nav-link" data-target="manage-complaints" id="nav-adm-manage"><i class="fa-solid fa-list-check"></i> Management</a></li>
                 <li><a href="#" class="nav-link" data-target="register-users" id="nav-adm-register"><i class="fa-solid fa-user-plus"></i> Register Users</a></li>
                 <li><a href="#" class="nav-link" data-target="manage-users" id="nav-adm-users"><i class="fa-solid fa-user-gear"></i> Manage Accounts</a></li>
+                <li><a href="#" class="nav-link" data-target="security-settings" id="nav-adm-security"><i class="fa-solid fa-shield-halved"></i> Security</a></li>
             </ul>
         </aside>
 
@@ -650,6 +652,59 @@
                                 <tbody id="adm-users-table-body"></tbody>
                             </table>
                         </div>
+                    </div>
+                </section>
+
+                <!-- SECURITY / PASSWORD CHANGE SECTION -->
+                <section id="security-settings" class="page-section">
+                    <div class="section-header animate-up">
+                        <h1>Security Settings</h1>
+                        <p>Manage your account credentials and security preferences.</p>
+                    </div>
+                    
+                    <div class="content-card animate-up" style="max-width: 500px; margin: 0 auto; padding: 2.5rem;">
+                        <div class="card-header" style="margin-bottom: 1.5rem; display: flex; align-items: center; gap: 10px;">
+                            <div style="background: rgba(99, 102, 241, 0.1); color: var(--primary); width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;">
+                                <i class="fa-solid fa-key"></i>
+                            </div>
+                            <div>
+                                <h3 style="margin: 0; font-size: 1.15rem; font-weight: 750;">Update Password</h3>
+                                <p style="margin: 2px 0 0 0; font-size: 0.8rem; color: var(--text-muted);">Ensure your account remains secure by choosing a strong password.</p>
+                            </div>
+                        </div>
+                        
+                        <form id="change-password-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                            <div class="form-group">
+                                <label for="security-current-password">Current Password *</label>
+                                <div class="input-icon">
+                                    <i class="fa-solid fa-lock"></i>
+                                    <input type="password" id="security-current-password" placeholder="••••••••" required autocomplete="current-password">
+                                    <i class="fa-regular fa-eye toggle-password" data-target="security-current-password" style="position: absolute; right: 1.25rem; top: 50%; transform: translateY(-50%); cursor: pointer; opacity: 0.6;"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="security-new-password">New Password *</label>
+                                <div class="input-icon">
+                                    <i class="fa-solid fa-key"></i>
+                                    <input type="password" id="security-new-password" placeholder="••••••••" required autocomplete="new-password">
+                                    <i class="fa-regular fa-eye toggle-password" data-target="security-new-password" style="position: absolute; right: 1.25rem; top: 50%; transform: translateY(-50%); cursor: pointer; opacity: 0.6;"></i>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="security-confirm-password">Confirm New Password *</label>
+                                <div class="input-icon">
+                                    <i class="fa-solid fa-shield-check"></i>
+                                    <input type="password" id="security-confirm-password" placeholder="••••••••" required autocomplete="new-password">
+                                    <i class="fa-regular fa-eye toggle-password" data-target="security-confirm-password" style="position: absolute; right: 1.25rem; top: 50%; transform: translateY(-50%); cursor: pointer; opacity: 0.6;"></i>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-block mt-1" id="change-pwd-btn">
+                                Update Password <i class="fa-solid fa-circle-check"></i>
+                            </button>
+                        </form>
                     </div>
                 </section>
 

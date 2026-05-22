@@ -2040,6 +2040,7 @@ input:focus, select:focus, textarea:focus {
     .toast {
         min-width: 100%;
     }
+}
 
 /* ==============================
    Responsive Enhancements
@@ -2090,20 +2091,56 @@ input:focus, select:focus, textarea:focus {
     }
 }
 
-/* Mobile view adjustments (max-width: 600px) */
-@media (max-width: 600px) {
+/* Tablet and mobile view alignments (max-width: 768px) */
+@media (max-width: 768px) {
+    .main-content {
+        padding: 1rem 1.25rem !important;
+    }
     .top-nav {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
+        margin: -1rem -1.25rem 2rem -1.25rem !important;
+        padding: 0.75rem 1rem !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        gap: 0.5rem !important;
+    }
+    .top-nav > div:last-child {
+        gap: 0.75rem !important;
     }
     .search-bar {
-        width: 100%;
-        margin-bottom: 0.5rem;
+        width: 130px !important;
+        padding: 0.5rem 0.75rem !important;
+        margin-bottom: 0 !important;
     }
     .search-bar:focus-within {
-        width: 100%;
+        width: 160px !important;
     }
+    .user-profile .user-info {
+        display: none !important;
+    }
+    .user-profile .profile-chevron {
+        display: none !important;
+    }
+    #logout-btn {
+        display: none !important;
+    }
+    .stats-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+    }
+    .stat-card {
+        width: 100% !important;
+        flex-direction: row !important;
+        align-items: center !important;
+        padding: 1rem 1.25rem !important;
+    }
+    .stat-icon-wrapper {
+        margin-bottom: 0 !important;
+    }
+}
+
+/* Mobile view adjustments (max-width: 600px) */
+@media (max-width: 600px) {
     .ui-action {
         width: 40px;
         height: 40px;
