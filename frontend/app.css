@@ -615,7 +615,7 @@ h1, h2, h3, h4 {
     top: calc(100% + 0.75rem);
     right: 0;
     width: 260px;
-    background: #ffffff; /* Solid white background for light mode to block text behind */
+    background: #ffffff !important; /* Solid white background for light mode to block text behind */
     border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 16px;
     box-shadow: 0 15px 35px -5px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
@@ -878,6 +878,7 @@ input:focus, select:focus, textarea:focus {
     justify-content: center;
     gap: 0.5rem;
     border: 1px solid transparent;
+    white-space: nowrap;
 }
 
 .btn-primary {
@@ -2195,6 +2196,14 @@ input:focus, select:focus, textarea:focus {
         height: 36px !important;
         font-size: 0.9rem !important;
     }
+    #mobile-toggle {
+        padding: 0 !important;
+        border: 1px solid var(--border) !important;
+        background: var(--bg-app) !important;
+        box-sizing: border-box !important;
+        appearance: none !important;
+        -webkit-appearance: none !important;
+    }
     .user-profile {
         padding: 0 !important;
         background: transparent !important;
@@ -2228,6 +2237,28 @@ input:focus, select:focus, textarea:focus {
     .btn {
         padding: 0.55rem 1rem;
         font-size: 0.85rem;
+    }
+    .card-header {
+        flex-wrap: wrap !important;
+        gap: 0.75rem !important;
+    }
+    .form-actions {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+        width: 100% !important;
+    }
+    .form-actions .btn {
+        width: 100% !important;
+    }
+    .modal-footer {
+        flex-direction: column-reverse !important;
+        gap: 0.75rem !important;
+        padding: 1rem 1.5rem !important;
+    }
+    .modal-footer .btn {
+        width: 100% !important;
+        margin-right: 0 !important;
+        margin-left: 0 !important;
     }
     .stats-grid {
         gap: 1rem;
