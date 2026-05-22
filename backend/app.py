@@ -23,13 +23,23 @@ _db_pass = os.getenv("DB_PASS")
 if not _db_pass: # Handles both missing and empty strings
     _db_pass = "Maqs@879240"
 
+_db_port = os.getenv("DB_PORT", "3306")
+if not _db_port or not str(_db_port).strip():
+    _db_port = 3306
+else:
+    try:
+        _db_port = int(_db_port)
+    except ValueError:
+        _db_port = 3306
+
 db_config = {
     "host": os.getenv("DB_HOST", "localhost"),
-    "port": int(os.getenv("DB_PORT", 3306)),
+    "port": _db_port,
     "user": os.getenv("DB_USER", "root"),
     "password": _db_pass,
     "database": os.getenv("DB_NAME", "scms_db")
 }
+
 
 def get_db_connection():
     try:
