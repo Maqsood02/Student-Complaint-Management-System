@@ -88,23 +88,24 @@ def trigger_email_service(data):
                 forwarded_host = request.headers.get("X-Forwarded-Host")
                 forwarded_proto = request.headers.get("X-Forwarded-Proto", "https")
                 if forwarded_host:
-                    host = f"{forwarded_proto}://{forwarded_host}/"
+                    host = f"{forwarded_proto}://{forwarded_host}"
                 else:
-                    host = request.host_url
+                    host = request.host_url.rstrip('/')
             
             if not host and os.getenv("VERCEL_URL"):
-                host = f"https://{os.getenv('VERCEL_URL')}/"
+                host = f"https://{os.getenv('VERCEL_URL')}"
                 
             # Ensure host uses https on Vercel
             if host.startswith("http://"):
                 host = "https://" + host[7:]
                 
-            url = f"{host}api/send-email"
+            url = f"{host.rstrip('/')}/api/send-email"
         else:
             url = f"http://localhost:{os.getenv('EMAIL_SERVICE_PORT', '5001')}/api/send-email"
             
         print(f"Triggering email service at: {url}")
-        response = requests.post(url, json=data, timeout=10)
+        # Use an 8.0s timeout which is safe on serverless environments to prevent 504 Gateway Timeouts
+        response = requests.post(url, json=data, timeout=8.0)
         print(f"Email service response status: {response.status_code}")
         return response.json()
     except Exception as e:
@@ -362,15 +363,20 @@ def submit_complaint():
     filename = None
     if file:
         filename = f"{uuid.uuid4()}_{file.filename}"
-        if not os.path.exists(UPLOAD_FOLDER):
-            os.makedirs(UPLOAD_FOLDER)
-        file.save(os.path.join(UPLOAD_FOLDER, filename))
+        try:
+            if not os.path.exists(UPLOAD_FOLDER):
+                os.makedirs(UPLOAD_FOLDER)
+            file.save(os.path.join(UPLOAD_FOLDER, filename))
+        except Exception as e:
+            return jsonify({"success": False, "message": f"File save failed: {str(e)}"}), 500
 
     complaint_id = f"CMP-{uuid.uuid4().hex[:6].upper()}"
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    conn = None
+    cursor = None
     try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
         cursor.execute("""
             INSERT INTO complaints (id, student_id, student_name, student_email, title, description, category, priority, status, attached_file)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Pending', %s)
@@ -391,10 +397,12 @@ def submit_complaint():
 
         return jsonify({"success": True, "complaint_id": complaint_id})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 # Initialize Tables
 def init_db():
@@ -421,38 +429,62 @@ init_db()
 
 @app.route('/api/notifications/<user_id>', methods=['GET'])
 def get_notifications(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM notifications WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
-    notes = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify(notes)
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM notifications WHERE user_id = %s ORDER BY created_at DESC", (user_id,))
+        notes = cursor.fetchall()
+        return jsonify(notes)
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/api/notifications/read/<user_id>', methods=['POST'])
 def mark_read(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("UPDATE notifications SET is_read = TRUE WHERE user_id = %s", (user_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return jsonify({"success": True})
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE notifications SET is_read = TRUE WHERE user_id = %s", (user_id,))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/api/complaints/<user_role>/<user_id>', methods=['GET'])
 def get_complaints(user_role, user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    if user_role == 'admin':
-        cursor.execute("SELECT * FROM complaints ORDER BY created_at DESC")
-    else:
-        cursor.execute("SELECT * FROM complaints WHERE student_id = %s ORDER BY created_at DESC", (user_id,))
-    
-    complaints = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return jsonify(complaints)
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        if user_role == 'admin':
+            cursor.execute("SELECT * FROM complaints ORDER BY created_at DESC")
+        else:
+            cursor.execute("SELECT * FROM complaints WHERE student_id = %s ORDER BY created_at DESC", (user_id,))
+        
+        complaints = cursor.fetchall()
+        return jsonify(complaints)
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/api/complaints/update', methods=['POST'])
 def update_complaint():
@@ -462,9 +494,11 @@ def update_complaint():
     priority = data.get('priority')
     reply = data.get('reply')
 
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    conn = None
+    cursor = None
     try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
         # 1. Fetch Student Details
         cursor.execute("SELECT student_id, student_email, student_name, title FROM complaints WHERE id = %s", (cid,))
         comp = cursor.fetchone()
@@ -503,24 +537,30 @@ def update_complaint():
 
         return jsonify({"success": True})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/api/admin/users', methods=['GET'])
 def admin_get_users():
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    conn = None
+    cursor = None
     try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT id, name, email, role FROM users ORDER BY name ASC")
         users = cursor.fetchall()
         return jsonify(users)
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/api/admin/users', methods=['POST'])
 def admin_create_user():
@@ -533,9 +573,11 @@ def admin_create_user():
     if not name or not email or not password:
         return jsonify({"success": False, "message": "All fields are required"}), 400
 
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    conn = None
+    cursor = None
     try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT id FROM users WHERE email = %s", (email,))
         if cursor.fetchone():
             return jsonify({"success": False, "message": "Email is already registered"}), 400
@@ -546,16 +588,20 @@ def admin_create_user():
         conn.commit()
         return jsonify({"success": True, "message": "User registered successfully"})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 @app.route('/api/admin/users/<int:user_id>', methods=['DELETE'])
 def admin_delete_user(user_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
+    conn = None
+    cursor = None
     try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT email, role FROM users WHERE id = %s", (user_id,))
         user = cursor.fetchone()
         if not user:
@@ -568,10 +614,12 @@ def admin_delete_user(user_id):
         conn.commit()
         return jsonify({"success": True, "message": "User account deleted successfully"})
     except Exception as e:
-        return jsonify({"success": False, "message": str(e)}), 500
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
     finally:
-        cursor.close()
-        conn.close()
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
