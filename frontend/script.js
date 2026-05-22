@@ -673,6 +673,29 @@ window.viewComplaint = (id) => {
 
         ${c.attached_file ? (() => {
             const evidenceSrc = c.attached_file.startsWith('data:') ? c.attached_file : `/uploads/${c.attached_file}`;
+            const isPDF = c.attached_file.toLowerCase().endsWith('.pdf') || c.attached_file.startsWith('data:application/pdf');
+            if (isPDF) {
+                return `
+                <div class="detail-group">
+                    <label class="modal-section-label">
+                        <i class="fa-solid fa-paperclip"></i> Attached Evidence (PDF Document)
+                    </label>
+                    <div class="evidence-pdf-card" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="background: rgba(239, 68, 68, 0.1); color: #ef4444; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0; color: var(--text-main); font-size: 1rem; font-weight: 700;">Documentary Evidence</h4>
+                                <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: var(--text-muted);">PDF Document</p>
+                            </div>
+                        </div>
+                        <a href="${evidenceSrc}" target="_blank" download="evidence.pdf" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; text-decoration: none; border-radius: 10px;">
+                            <i class="fa-solid fa-up-right-from-square"></i> Open PDF
+                        </a>
+                    </div>
+                </div>`;
+            }
             return `
             <div class="detail-group">
                 <label class="modal-section-label">
@@ -763,6 +786,29 @@ window.manageComplaint = (id) => {
         
         ${c.attached_file ? (() => {
             const evidenceSrc = c.attached_file.startsWith('data:') ? c.attached_file : `/uploads/${c.attached_file}`;
+            const isPDF = c.attached_file.toLowerCase().endsWith('.pdf') || c.attached_file.startsWith('data:application/pdf');
+            if (isPDF) {
+                return `
+                <div class="detail-group">
+                    <label class="modal-section-label">
+                        <i class="fa-solid fa-paperclip"></i> Provided Evidence (PDF Document)
+                    </label>
+                    <div class="evidence-pdf-card" style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; padding: 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 0.5rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <div style="background: rgba(239, 68, 68, 0.1); color: #ef4444; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </div>
+                            <div>
+                                <h4 style="margin: 0; color: var(--text-main); font-size: 1rem; font-weight: 700;">Documentary Evidence</h4>
+                                <p style="margin: 4px 0 0 0; font-size: 0.8rem; color: var(--text-muted);">PDF Document</p>
+                            </div>
+                        </div>
+                        <a href="${evidenceSrc}" target="_blank" download="evidence.pdf" class="btn btn-primary" style="padding: 0.6rem 1.2rem; font-size: 0.85rem; display: flex; align-items: center; gap: 8px; text-decoration: none; border-radius: 10px;">
+                            <i class="fa-solid fa-up-right-from-square"></i> Open PDF
+                        </a>
+                    </div>
+                </div>`;
+            }
             return `
             <div class="detail-group">
                 <label class="modal-section-label">

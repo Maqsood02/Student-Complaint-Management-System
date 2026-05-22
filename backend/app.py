@@ -81,29 +81,38 @@ def trigger_email_service(data):
         # Determine service URL and dynamic siteUrl based on environment
         is_vercel = os.getenv("VERCEL") == "1"
         host = ""
-        if has_request_context():
-            forwarded_host = request.headers.get("X-Forwarded-Host")
-            forwarded_proto = request.headers.get("X-Forwarded-Proto", "https")
-            if forwarded_host:
-                host = f"{forwarded_proto}://{forwarded_host}"
-            else:
-                host = request.host_url.rstrip('/')
         
+        if has_request_context():
+            # Check headers in order of reliability for public domain
+            for header in ["X-Forwarded-Host", "X-Vercel-Deployment-Url", "Host"]:
+                val = request.headers.get(header)
+                if val and "localhost" not in val and "127.0.0.1" not in val:
+                    proto = request.headers.get("X-Forwarded-Proto", "https")
+                    host = f"{proto}://{val}"
+                    break
+        
+        # If still not resolved and we are on Vercel, use VERCEL_URL env
         if not host and os.getenv("VERCEL_URL"):
             host = f"https://{os.getenv('VERCEL_URL')}"
             
-        # Ensure host uses https on Vercel
-        if host and is_vercel and host.startswith("http://"):
-            host = "https://" + host[7:]
+        # If still not resolved, use request.host_url if context exists
+        if not host and has_request_context():
+            host = request.host_url.rstrip('/')
             
+        # Final local fallback
         if not host:
             host = "http://localhost:5000"
+            
+        # Clean up and ensure https on Vercel
+        host = host.rstrip('/')
+        if is_vercel and host.startswith("http://") and "localhost" not in host and "127.0.0.1" not in host:
+            host = "https://" + host[7:]
             
         # Add siteUrl to the email payloads
         data['siteUrl'] = host
         
         if is_vercel:
-            url = f"{host.rstrip('/')}/api/send-email"
+            url = f"{host}/api/send-email"
         else:
             url = f"http://localhost:{os.getenv('EMAIL_SERVICE_PORT', '5001')}/api/send-email"
             
