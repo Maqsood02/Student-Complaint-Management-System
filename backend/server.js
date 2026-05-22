@@ -8,7 +8,8 @@ const app = express();
 const PORT = process.env.EMAIL_SERVICE_PORT || 5001;
 
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
 
 // Department Email Mapping
 const departmentEmails = {
@@ -25,6 +26,9 @@ const departmentEmails = {
 // Nodemailer Transporter
 const transporter = nodemailer.createTransport({
     service: 'gmail',
+    pool: true,
+    maxConnections: 5,
+    maxMessages: 100,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
@@ -74,6 +78,18 @@ const getStudentEmailTemplate = (data) => {
                     <tr><td style="padding: 10px 0; color: #64748b; font-size: 14px;">Subject</td><td style="padding: 10px 0; font-weight: 600;">${data.title}</td></tr>
                     <tr><td style="padding: 10px 0; color: #64748b; font-size: 14px;">Category</td><td style="padding: 10px 0; font-weight: 600;">${data.category}</td></tr>
                 </table>
+                ${data.hasImage ? `
+                <div style="margin-top: 20px; text-align: center; border-top: 1px solid #334155; padding-top: 20px;">
+                    <p style="color: #64748b; font-size: 12px; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; letter-spacing: 0.05em;">Attached Evidence Preview</p>
+                    <img src="cid:evidenceImage" style="max-width: 100%; max-height: 250px; border-radius: 12px; border: 1px solid #334155;" alt="Evidence Preview" />
+                </div>
+                ` : ''}
+                ${data.hasPdf ? `
+                <div style="margin-top: 20px; text-align: center; border-top: 1px solid #334155; padding-top: 20px;">
+                    <p style="color: #64748b; font-size: 12px; text-transform: uppercase; margin-bottom: 4px; font-weight: 700; letter-spacing: 0.05em;">Documentary Evidence</p>
+                    <span style="color: #10b981; font-weight: 600; font-size: 14px;"><span style="font-size: 18px;">📎</span> PDF Document Attached</span>
+                </div>
+                ` : ''}
             </div>
             <div style="text-align: center;">
                 <a href="${siteUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 14px 28px; border-radius: 14px; text-decoration: none; font-weight: 600; font-size: 15px;">Track Live Status</a>
@@ -112,6 +128,19 @@ const getDeptEmailTemplate = (data) => {
                 <div style="margin-top: 20px; padding: 20px; background: rgba(239, 68, 68, 0.05); border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
                     <p style="margin: 0; color: #fecaca; font-style: italic; font-size: 15px; line-height: 1.6;">"${data.description}"</p>
                 </div>
+                
+                ${data.hasImage ? `
+                <div style="margin-top: 25px; text-align: center; border-top: 1px solid #334155; padding-top: 20px;">
+                    <p style="color: #64748b; font-size: 12px; text-transform: uppercase; margin-bottom: 12px; font-weight: 700; letter-spacing: 0.05em;">Attached Evidence Preview</p>
+                    <img src="cid:evidenceImage" style="max-width: 100%; max-height: 250px; border-radius: 12px; border: 1px solid #334155;" alt="Evidence Preview" />
+                </div>
+                ` : ''}
+                ${data.hasPdf ? `
+                <div style="margin-top: 25px; text-align: center; border-top: 1px solid #334155; padding-top: 20px;">
+                    <p style="color: #64748b; font-size: 12px; text-transform: uppercase; margin-bottom: 4px; font-weight: 700; letter-spacing: 0.05em;">Documentary Evidence</p>
+                    <span style="color: #ef4444; font-weight: 600; font-size: 14px;"><span style="font-size: 18px;">📎</span> PDF Document Attached</span>
+                </div>
+                ` : ''}
             </div>
             
             <div style="text-align: center; margin-top: 40px;">
@@ -171,7 +200,7 @@ const getStudentReplyTemplate = (data) => {
 };
 
 app.post('/api/send-email', async (req, res) => {
-    const { studentEmail, studentName, category, title, description, complaintId, dept } = req.body;
+    const { studentEmail, studentName, category, title, description, complaintId, dept, attachedFile } = req.body;
 
     console.log(`--- [EMAIL SERVICE] Request for ${studentEmail} (${category}${dept ? ' - ' + dept : ''}) ---`);
 
@@ -249,23 +278,89 @@ app.post('/api/send-email', async (req, res) => {
 
         console.log(`--- [EMAIL SERVICE] Alert will be sent to: ${deptEmail} ---`);
 
+        // Parse attachments
+        const attachments = [];
+        let hasImage = false;
+        let hasPdf = false;
+
+        if (attachedFile) {
+            if (attachedFile.startsWith('data:')) {
+                const matches = attachedFile.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+                if (matches && matches.length === 3) {
+                    const contentType = matches[1];
+                    const base64Data = matches[2];
+                    const isPdf = contentType === 'application/pdf';
+                    const extension = isPdf ? 'pdf' : (contentType.split('/')[1] || 'png');
+                    
+                    if (isPdf) {
+                        attachments.push({
+                            filename: `evidence.pdf`,
+                            content: Buffer.from(base64Data, 'base64'),
+                            contentType: 'application/pdf'
+                        });
+                        hasPdf = true;
+                    } else {
+                        attachments.push({
+                            filename: `evidence.${extension}`,
+                            content: Buffer.from(base64Data, 'base64'),
+                            contentType: contentType,
+                            cid: 'evidenceImage'
+                        });
+                        hasImage = true;
+                    }
+                }
+            } else {
+                // local file reference
+                const fs = require('fs');
+                const path = require('path');
+                const uploadDir = process.env.VERCEL === '1' ? '/tmp' : path.join(__dirname, 'uploads');
+                const filePath = path.join(uploadDir, attachedFile);
+                if (fs.existsSync(filePath)) {
+                    const isPdf = attachedFile.toLowerCase().endsWith('.pdf');
+                    if (isPdf) {
+                        attachments.push({
+                            filename: 'evidence.pdf',
+                            path: filePath
+                        });
+                        hasPdf = true;
+                    } else {
+                        attachments.push({
+                            filename: attachedFile,
+                            path: filePath,
+                            cid: 'evidenceImage'
+                        });
+                        hasImage = true;
+                    }
+                }
+            }
+        }
+
+        const emailPromises = [];
+
         // 1. Send confirmation to student
         if (category !== "Security") {
-            await transporter.sendMail({
+            const studentHtml = getStudentEmailTemplate({ ...req.body, hasImage, hasPdf });
+            emailPromises.push(transporter.sendMail({
                 from: process.env.EMAIL_USER,
                 to: studentEmail,
                 subject: `Complaint Received: ${complaintId}`,
-                html: getStudentEmailTemplate(req.body)
-            });
+                html: studentHtml,
+                attachments: attachments
+            }));
         }
 
         // 2. Send alert to department
-        await transporter.sendMail({
+        const deptHtml = getDeptEmailTemplate({ ...req.body, hasImage, hasPdf });
+        emailPromises.push(transporter.sendMail({
             from: process.env.EMAIL_USER,
             to: deptEmail,
             subject: `New Complaint Alert: ${category} - ${complaintId}`,
-            html: getDeptEmailTemplate(req.body)
-        });
+            html: deptHtml,
+            attachments: attachments
+        }));
+
+        // Send all emails in parallel to double the response speed
+        await Promise.all(emailPromises);
 
         console.log("--- [EMAIL SERVICE] SUCCESS: Complaint Alert Emails Sent ---");
         res.json({ success: true, message: 'Complaint emails sent successfully' });

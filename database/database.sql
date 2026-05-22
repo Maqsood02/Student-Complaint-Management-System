@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS complaints (
     category VARCHAR(50) NOT NULL,
     priority ENUM('Low', 'Medium', 'High') DEFAULT 'Medium',
     status ENUM('Pending', 'In Progress', 'Resolved') DEFAULT 'Pending',
-    attached_file VARCHAR(255),
+    attached_file LONGTEXT,
     admin_reply TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE SET NULL

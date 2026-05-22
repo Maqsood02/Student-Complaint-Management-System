@@ -1,9 +1,9 @@
-# Trigger Vercel build with updated environment variables
 import os
 import uuid
 import datetime
 import requests
 import random
+import threading
 from flask import Flask, request, jsonify, session, send_from_directory, has_request_context
 from flask_cors import CORS
 import mysql.connector
@@ -91,39 +91,11 @@ init_admin()
 # Helper: Trigger Node.js Email Service
 def trigger_email_service(data):
     try:
-        # Determine service URL and dynamic siteUrl based on environment
         is_vercel = os.getenv("VERCEL") == "1"
-        host = ""
-        
-        if has_request_context():
-            # Check headers in order of reliability for public domain
-            for header in ["X-Forwarded-Host", "X-Vercel-Deployment-Url", "Host"]:
-                val = request.headers.get(header)
-                if val and "localhost" not in val and "127.0.0.1" not in val:
-                    proto = request.headers.get("X-Forwarded-Proto", "https")
-                    host = f"{proto}://{val}"
-                    break
-        
-        # If still not resolved and we are on Vercel, use VERCEL_URL env
-        if not host and os.getenv("VERCEL_URL"):
-            host = f"https://{os.getenv('VERCEL_URL')}"
-            
-        # If still not resolved, use request.host_url if context exists
-        if not host and has_request_context():
-            host = request.host_url.rstrip('/')
-            
-        # Final local fallback
+        host = data.get('siteUrl')
         if not host:
             host = "http://localhost:5000"
             
-        # Clean up and ensure https on Vercel
-        host = host.rstrip('/')
-        if is_vercel and host.startswith("http://") and "localhost" not in host and "127.0.0.1" not in host:
-            host = "https://" + host[7:]
-            
-        # Add siteUrl to the email payloads
-        data['siteUrl'] = host
-        
         if is_vercel:
             url = f"{host}/api/send-email"
         else:
@@ -137,6 +109,37 @@ def trigger_email_service(data):
     except Exception as e:
         print(f"Email Service Error: {e}")
         return {"success": False, "error": str(e)}
+
+# Helper: Trigger Node.js Email Service in Background
+def trigger_email_service_async(data):
+    try:
+        # Pre-populate siteUrl from Flask request context in the main thread
+        if 'siteUrl' not in data:
+            host = ""
+            if has_request_context():
+                for header in ["X-Forwarded-Host", "X-Vercel-Deployment-Url", "Host"]:
+                    val = request.headers.get(header)
+                    if val and "localhost" not in val and "127.0.0.1" not in val:
+                        proto = request.headers.get("X-Forwarded-Proto", "https")
+                        host = f"{proto}://{val}"
+                        break
+            if not host and os.getenv("VERCEL_URL"):
+                host = f"https://{os.getenv('VERCEL_URL')}"
+            if not host and has_request_context():
+                host = request.host_url.rstrip('/')
+            if not host:
+                host = "http://localhost:5000"
+            host = host.rstrip('/')
+            if os.getenv("VERCEL") == "1" and host.startswith("http://") and "localhost" not in host and "127.0.0.1" not in host:
+                host = "https://" + host[7:]
+            data['siteUrl'] = host
+
+        thread = threading.Thread(target=trigger_email_service, args=(data,))
+        thread.daemon = True
+        thread.start()
+    except Exception as e:
+        print(f"Failed to spawn email background thread: {e}")
+
 
 # --- FRONTEND ROUTES ---
 
@@ -192,8 +195,8 @@ def send_otp():
             "timestamp": datetime.datetime.now()
         }
 
-        # Send OTP via Email Service
-        email_res = trigger_email_service({
+        # Send OTP via Email Service in background
+        trigger_email_service_async({
             "studentEmail": email,
             "studentName": name,
             "category": "Verification",
@@ -203,16 +206,11 @@ def send_otp():
             "complaintId": "AUTH-OTP"
         })
 
-        # IMPROVEMENT: Even if email fails, let user proceed so they can use terminal OTP
-        if not email_res or not email_res.get('success'):
-            print(f"--- [EMAIL FAILED] Use Terminal OTP: {otp} ---")
-            return jsonify({
-                "success": True, 
-                "message": "OTP generated! (Email service was busy, please check terminal/support)",
-                "note": "proceed_anyway"
-            })
-
-        return jsonify({"success": True, "message": "OTP sent successfully"})
+        return jsonify({
+            "success": True, 
+            "message": "OTP generated! Verification email sent.",
+            "note": "proceed_anyway"
+        })
     except Exception as e:
         print(f"OTP SEND ERROR: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
@@ -282,8 +280,8 @@ def forgot_password():
             "timestamp": datetime.datetime.now()
         }
 
-        # Send Reset Code via Email Service
-        trigger_email_service({
+        # Send Reset Code via Email Service in background
+        trigger_email_service_async({
             "studentEmail": email,
             "studentName": user['name'],
             "category": "Security",
@@ -414,7 +412,7 @@ def submit_complaint():
         """, (complaint_id, student_id, student_name, student_email, title, description, category, priority, attached_file_value))
         conn.commit()
 
-        # Trigger Email Service
+        # Trigger Email Service in background
         email_data = {
             "studentEmail": student_email,
             "studentName": student_name,
@@ -422,9 +420,10 @@ def submit_complaint():
             "title": title,
             "description": description,
             "complaintId": complaint_id,
-            "dept": dept # Pass department for custom routing
+            "dept": dept, # Pass department for custom routing
+            "attachedFile": attached_file_value # Include attachment string
         }
-        trigger_email_service(email_data)
+        trigger_email_service_async(email_data)
 
         return jsonify({"success": True, "complaint_id": complaint_id})
     except Exception as e:
@@ -555,7 +554,7 @@ def update_complaint():
         
         conn.commit()
 
-        # 4. Trigger Email to Student
+        # 4. Trigger Email to Student in background
         email_data = {
             "studentEmail": comp['student_email'],
             "studentName": comp['student_name'],
@@ -564,7 +563,7 @@ def update_complaint():
             "status": status,
             "adminReply": reply
         }
-        trigger_email_service(email_data)
+        trigger_email_service_async(email_data)
 
         return jsonify({"success": True})
     except Exception as e:
