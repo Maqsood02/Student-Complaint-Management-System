@@ -44,5 +44,6 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- Seed Admin User (Password: admin123)
 -- Hash generated via bcrypt: $2b$12$8K5Y/6Jq.6Y8xY8xY8xY8e8K5Y/6Jq.6Y8xY8xY8xY8e (Example)
 -- In production, hashing should be done via script.
-INSERT IGNORE INTO users (name, email, password, role) 
-VALUES ('System Admin', 'admin@scms.edu', '$2b$12$K7v1b1b1b1b1b1b1b1b1b1u7K7v1b1b1b1b1b1b1b1b1b1u7', 'admin');
+-- INSERT IGNORE INTO users (name, email, password, role) 
+-- VALUES ('System Admin', 'admin@scms.edu', '$2b$12$K7v1b1b1b1b1b1b1b1b1b1u7K7v1b1b1b1b1b1b1b1b1b1u7', 'admin');
+

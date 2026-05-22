@@ -62,16 +62,29 @@ def init_admin():
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         cursor.execute("SELECT * FROM users WHERE email = 'admin@scms.edu'")
-        if not cursor.fetchone():
+        admin_user = cursor.fetchone()
+        
+        is_invalid = False
+        if admin_user:
+            pw = admin_user.get('password', '')
+            if not pw or len(pw) != 60 or not (pw.startswith('$2a$') or pw.startswith('$2b$') or pw.startswith('$2y$')):
+                is_invalid = True
+                
+        if not admin_user or is_invalid:
             hashed_pw = bcrypt.generate_password_hash('admin123').decode('utf-8')
-            cursor.execute("INSERT INTO users (name, email, password, role) VALUES (%s, %s, %s, %s)",
-                           ('System Admin', 'admin@scms.edu', hashed_pw, 'admin'))
+            if is_invalid:
+                print("--- DETECTED INVALID ADMIN PASSWORD HASH. UPDATING... ---")
+                cursor.execute("UPDATE users SET name = 'System Admin', password = %s, role = 'admin' WHERE email = 'admin@scms.edu'", (hashed_pw,))
+            else:
+                cursor.execute("INSERT INTO users (name, email, password, role) VALUES (%s, %s, %s, %s)",
+                               ('System Admin', 'admin@scms.edu', hashed_pw, 'admin'))
             conn.commit()
-            print("--- ADMIN ACCOUNT CREATED ---")
+            print("--- ADMIN ACCOUNT CREATED/RESET ---")
         cursor.close()
         conn.close()
     except Exception as e:
         print(f"Admin Init Failed: {e}")
+
 
 init_admin()
 
