@@ -1,7 +1,7 @@
 -- SCMS Database Schema
 
-CREATE DATABASE IF NOT EXISTS scms_db;
-USE scms_db;
+-- CREATE DATABASE IF NOT EXISTS scms_db;
+-- USE scms_db;
 
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
