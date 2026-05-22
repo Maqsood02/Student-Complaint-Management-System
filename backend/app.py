@@ -4,7 +4,7 @@ import uuid
 import datetime
 import requests
 import random
-from flask import Flask, request, jsonify, session, send_from_directory
+from flask import Flask, request, jsonify, session, send_from_directory, has_request_context
 from flask_cors import CORS
 import mysql.connector
 from flask_bcrypt import Bcrypt
@@ -41,6 +41,13 @@ db_config = {
     "database": os.getenv("DB_NAME", "scms_db")
 }
 
+# Upload Folder Configuration (use /tmp on Vercel to bypass read-only filesystem restrictions)
+if os.getenv("VERCEL") == "1":
+    UPLOAD_FOLDER = "/tmp"
+else:
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(__file__), 'uploads')
+
+
 
 def get_db_connection():
     try:
@@ -72,24 +79,33 @@ init_admin()
 def trigger_email_service(data):
     try:
         # Determine service URL based on environment
-        is_local = False
-        try:
-            if request and request.host:
-                is_local = "localhost" in request.host or "127.0.0.1" in request.host
-        except Exception:
-            pass
-            
-        if is_local:
-            url = f"http://localhost:{os.getenv('EMAIL_SERVICE_PORT', '5001')}/api/send-email"
-        else:
+        is_vercel = os.getenv("VERCEL") == "1"
+        
+        if is_vercel:
             # On Vercel, route through the public deployment URL
-            host = request.host_url if (request and request.host_url) else ""
+            host = ""
+            if has_request_context():
+                forwarded_host = request.headers.get("X-Forwarded-Host")
+                forwarded_proto = request.headers.get("X-Forwarded-Proto", "https")
+                if forwarded_host:
+                    host = f"{forwarded_proto}://{forwarded_host}/"
+                else:
+                    host = request.host_url
+            
             if not host and os.getenv("VERCEL_URL"):
                 host = f"https://{os.getenv('VERCEL_URL')}/"
+                
+            # Ensure host uses https on Vercel
+            if host.startswith("http://"):
+                host = "https://" + host[7:]
+                
             url = f"{host}api/send-email"
+        else:
+            url = f"http://localhost:{os.getenv('EMAIL_SERVICE_PORT', '5001')}/api/send-email"
             
         print(f"Triggering email service at: {url}")
-        response = requests.post(url, json=data, timeout=5)
+        response = requests.post(url, json=data, timeout=10)
+        print(f"Email service response status: {response.status_code}")
         return response.json()
     except Exception as e:
         print(f"Email Service Error: {e}")
@@ -111,8 +127,7 @@ def serve_static(path):
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
-    upload_dir = os.path.join(os.path.dirname(__file__), 'uploads')
-    return send_from_directory(upload_dir, filename)
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 # --- AUTH & OTP ROUTES ---
 
@@ -347,10 +362,9 @@ def submit_complaint():
     filename = None
     if file:
         filename = f"{uuid.uuid4()}_{file.filename}"
-        upload_folder = os.path.join(os.path.dirname(__file__), 'uploads')
-        if not os.path.exists(upload_folder):
-            os.makedirs(upload_folder)
-        file.save(os.path.join(upload_folder, filename))
+        if not os.path.exists(UPLOAD_FOLDER):
+            os.makedirs(UPLOAD_FOLDER)
+        file.save(os.path.join(UPLOAD_FOLDER, filename))
 
     complaint_id = f"CMP-{uuid.uuid4().hex[:6].upper()}"
     
