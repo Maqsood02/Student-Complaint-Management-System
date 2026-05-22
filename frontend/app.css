@@ -610,18 +610,15 @@ h1, h2, h3, h4 {
     opacity: 1;
 }
 
-/* Dropdown Menu styling */
 .profile-dropdown {
     position: absolute;
     top: calc(100% + 0.75rem);
     right: 0;
     width: 260px;
-    background: var(--bg-card);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
-    border: 1px solid var(--glass-border);
+    background: #ffffff; /* Solid white background for light mode to block text behind */
+    border: 1px solid rgba(148, 163, 184, 0.25);
     border-radius: 16px;
-    box-shadow: 0 15px 35px -5px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.05);
+    box-shadow: 0 15px 35px -5px rgba(15, 23, 42, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
     padding: 1rem;
     z-index: 1000;
     display: none;
@@ -629,6 +626,13 @@ h1, h2, h3, h4 {
     transform: translateY(-10px);
     transition: opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1), transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
 }
+
+[data-theme="dark"] .profile-dropdown {
+    background: #111827 !important; /* Solid dark background for dark mode */
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 15px 35px -5px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
 
 .profile-dropdown.show {
     display: block;
