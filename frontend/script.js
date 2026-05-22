@@ -13,6 +13,60 @@ function openLightbox(src) {
     }
 }
 
+// Client-side image compression helper
+function compressImage(file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                } else {
+                    if (height > maxHeight) {
+                        width = Math.round((width * maxHeight) / height);
+                        height = maxHeight;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(dataUrl);
+            };
+            img.onerror = (err) => reject(err);
+        };
+        reader.onerror = (err) => reject(err);
+    });
+}
+
+// Helper to convert image or file to Base64 (compressing if it is an image)
+async function processFile(file) {
+    if (file.type.startsWith('image/')) {
+        return await compressImage(file, 1000, 1000, 0.7);
+    } else {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = (err) => reject(err);
+            reader.readAsDataURL(file);
+        });
+    }
+}
+
 // Notification System
 async function fetchNotifications() {
     if (!currentUser || currentUser.role === 'admin') return;
@@ -617,22 +671,24 @@ window.viewComplaint = (id) => {
             </div>
         </div>
 
-        ${c.attached_file ? `
+        ${c.attached_file ? (() => {
+            const evidenceSrc = c.attached_file.startsWith('data:') ? c.attached_file : `/uploads/${c.attached_file}`;
+            return `
             <div class="detail-group">
                 <label class="modal-section-label">
                     <i class="fa-solid fa-paperclip"></i> Attached Evidence
                 </label>
                 <div class="evidence-gallery-card">
-                    <div class="evidence-thumbnail-wrapper" onclick="openLightbox('/uploads/${c.attached_file}')">
-                        <img src="/uploads/${c.attached_file}" alt="Evidence" class="evidence-thumbnail-img">
+                    <div class="evidence-thumbnail-wrapper" onclick="openLightbox('${evidenceSrc}')">
+                        <img src="${evidenceSrc}" alt="Evidence" class="evidence-thumbnail-img">
                         <div class="evidence-overlay-hover">
                             <i class="fa-solid fa-magnifying-glass-plus"></i>
                             <span>View Full Screen</span>
                         </div>
                     </div>
                 </div>
-            </div>
-        ` : ''}
+            </div>`;
+        })() : ''}
 
         ${c.admin_reply ? `
             <div class="modal-resolution-card">
@@ -705,22 +761,24 @@ window.manageComplaint = (id) => {
             ` : ''}
         </div>
         
-        ${c.attached_file ? `
+        ${c.attached_file ? (() => {
+            const evidenceSrc = c.attached_file.startsWith('data:') ? c.attached_file : `/uploads/${c.attached_file}`;
+            return `
             <div class="detail-group">
                 <label class="modal-section-label">
                     <i class="fa-solid fa-paperclip"></i> Provided Evidence
                 </label>
                 <div class="evidence-gallery-card">
-                    <div class="evidence-thumbnail-wrapper" onclick="openLightbox('/uploads/${c.attached_file}')">
-                        <img src="/uploads/${c.attached_file}" alt="Evidence" class="evidence-thumbnail-img">
+                    <div class="evidence-thumbnail-wrapper" onclick="openLightbox('${evidenceSrc}')">
+                        <img src="${evidenceSrc}" alt="Evidence" class="evidence-thumbnail-img">
                         <div class="evidence-overlay-hover">
                             <i class="fa-solid fa-magnifying-glass-plus"></i>
                             <span>View Full Screen</span>
                         </div>
                     </div>
                 </div>
-            </div>
-        ` : ''}
+            </div>`;
+        })() : ''}
         
         <!-- Management Actions Form -->
         <div class="modal-management-actions-form">
@@ -996,7 +1054,15 @@ async function handleComplaintSubmit(e) {
         showToast('Supportive evidence is mandatory to upload.', 'danger');
         return;
     }
-    formData.append('file', fileInput.files[0]);
+
+    try {
+        showToast('Processing attachment...', 'info');
+        const fileBase64 = await processFile(fileInput.files[0]);
+        formData.append('file_base64', fileBase64);
+    } catch (err) {
+        showToast('Failed to process/compress attachment.', 'danger');
+        return;
+    }
 
     try {
         showToast('Submitting complaint...', 'success');

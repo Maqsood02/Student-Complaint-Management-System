@@ -78,32 +78,36 @@ init_admin()
 # Helper: Trigger Node.js Email Service
 def trigger_email_service(data):
     try:
-        # Determine service URL based on environment
+        # Determine service URL and dynamic siteUrl based on environment
         is_vercel = os.getenv("VERCEL") == "1"
+        host = ""
+        if has_request_context():
+            forwarded_host = request.headers.get("X-Forwarded-Host")
+            forwarded_proto = request.headers.get("X-Forwarded-Proto", "https")
+            if forwarded_host:
+                host = f"{forwarded_proto}://{forwarded_host}"
+            else:
+                host = request.host_url.rstrip('/')
+        
+        if not host and os.getenv("VERCEL_URL"):
+            host = f"https://{os.getenv('VERCEL_URL')}"
+            
+        # Ensure host uses https on Vercel
+        if host and is_vercel and host.startswith("http://"):
+            host = "https://" + host[7:]
+            
+        if not host:
+            host = "http://localhost:5000"
+            
+        # Add siteUrl to the email payloads
+        data['siteUrl'] = host
         
         if is_vercel:
-            # On Vercel, route through the public deployment URL
-            host = ""
-            if has_request_context():
-                forwarded_host = request.headers.get("X-Forwarded-Host")
-                forwarded_proto = request.headers.get("X-Forwarded-Proto", "https")
-                if forwarded_host:
-                    host = f"{forwarded_proto}://{forwarded_host}"
-                else:
-                    host = request.host_url.rstrip('/')
-            
-            if not host and os.getenv("VERCEL_URL"):
-                host = f"https://{os.getenv('VERCEL_URL')}"
-                
-            # Ensure host uses https on Vercel
-            if host.startswith("http://"):
-                host = "https://" + host[7:]
-                
             url = f"{host.rstrip('/')}/api/send-email"
         else:
             url = f"http://localhost:{os.getenv('EMAIL_SERVICE_PORT', '5001')}/api/send-email"
             
-        print(f"Triggering email service at: {url}")
+        print(f"Triggering email service at: {url} with siteUrl: {host}")
         # Use an 8.0s timeout which is safe on serverless environments to prevent 504 Gateway Timeouts
         response = requests.post(url, json=data, timeout=8.0)
         print(f"Email service response status: {response.status_code}")
@@ -359,16 +363,21 @@ def submit_complaint():
         loc_str = f"{dept if dept else ''} - {classroom if classroom else ''}".strip(' - ')
         description = f"[[ LOCATION: {loc_str} ]] \n\n {description}"
 
-    file = request.files.get('file')
-    filename = None
-    if file:
-        filename = f"{uuid.uuid4()}_{file.filename}"
-        try:
-            if not os.path.exists(UPLOAD_FOLDER):
-                os.makedirs(UPLOAD_FOLDER)
-            file.save(os.path.join(UPLOAD_FOLDER, filename))
-        except Exception as e:
-            return jsonify({"success": False, "message": f"File save failed: {str(e)}"}), 500
+    file_base64 = request.form.get('file_base64')
+    attached_file_value = None
+    if file_base64:
+        attached_file_value = file_base64
+    else:
+        file = request.files.get('file')
+        if file:
+            filename = f"{uuid.uuid4()}_{file.filename}"
+            try:
+                if not os.path.exists(UPLOAD_FOLDER):
+                    os.makedirs(UPLOAD_FOLDER)
+                file.save(os.path.join(UPLOAD_FOLDER, filename))
+                attached_file_value = filename
+            except Exception as e:
+                return jsonify({"success": False, "message": f"File save failed: {str(e)}"}), 500
 
     complaint_id = f"CMP-{uuid.uuid4().hex[:6].upper()}"
     
@@ -380,7 +389,7 @@ def submit_complaint():
         cursor.execute("""
             INSERT INTO complaints (id, student_id, student_name, student_email, title, description, category, priority, status, attached_file)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Pending', %s)
-        """, (complaint_id, student_id, student_name, student_email, title, description, category, priority, filename))
+        """, (complaint_id, student_id, student_name, student_email, title, description, category, priority, attached_file_value))
         conn.commit()
 
         # Trigger Email Service

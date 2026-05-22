@@ -58,7 +58,9 @@ const getOTPTemplate = (data) => `
 </div>
 `;
 
-const getStudentEmailTemplate = (data) => `
+const getStudentEmailTemplate = (data) => {
+    const siteUrl = data.siteUrl || "http://localhost:5000";
+    return `
 <div style="background-color: #0f172a; padding: 40px 20px; font-family: 'Inter', sans-serif;">
     <div style="max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 24px; border: 1px solid #334155; overflow: hidden; color: #f8fafc;">
         <div style="background: #4f46e5; padding: 40px; text-align: center;">
@@ -74,14 +76,17 @@ const getStudentEmailTemplate = (data) => `
                 </table>
             </div>
             <div style="text-align: center;">
-                <a href="#" style="display: inline-block; background: #4f46e5; color: white; padding: 14px 28px; border-radius: 14px; text-decoration: none; font-weight: 600; font-size: 15px;">Track Live Status</a>
+                <a href="${siteUrl}" style="display: inline-block; background: #4f46e5; color: white; padding: 14px 28px; border-radius: 14px; text-decoration: none; font-weight: 600; font-size: 15px;">Track Live Status</a>
             </div>
         </div>
     </div>
 </div>
 `;
+};
 
-const getDeptEmailTemplate = (data) => `
+const getDeptEmailTemplate = (data) => {
+    const siteUrl = data.siteUrl || "http://localhost:5000";
+    return `
 <div style="background-color: #0f172a; padding: 60px 20px; font-family: 'Inter', system-ui, sans-serif; color: #f8fafc;">
     <div style="max-width: 600px; margin: 0 auto; background: #1e293b; border-radius: 32px; border: 1px solid #ef4444; overflow: hidden; box-shadow: 0 0 40px rgba(239, 68, 68, 0.2);">
         <div style="background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%); padding: 50px 40px; text-align: center; color: white;">
@@ -110,7 +115,7 @@ const getDeptEmailTemplate = (data) => `
             </div>
             
             <div style="text-align: center; margin-top: 40px;">
-                <a href="http://localhost:5000" style="display: inline-block; background: #ef4444; color: white; padding: 18px 36px; border-radius: 16px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);">Open Admin Panel</a>
+                <a href="${siteUrl}" style="display: inline-block; background: #ef4444; color: white; padding: 18px 36px; border-radius: 16px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);">Open Admin Panel</a>
             </div>
             
             <p style="text-align: center; color: #475569; font-size: 12px; margin-top: 40px;">SCMS Automated Notification System &bull; Confidential</p>
@@ -118,9 +123,11 @@ const getDeptEmailTemplate = (data) => `
     </div>
 </div>
 `;
+};
 
 // API Endpoint to send emails
 const getStudentReplyTemplate = (data) => {
+    const siteUrl = data.siteUrl || "http://localhost:5000";
     let statusConfig = {
         icon: '📫',
         headline: 'Complaint Update',
@@ -152,7 +159,7 @@ const getStudentReplyTemplate = (data) => {
             </div>
             
             <div style="text-align: center; margin-top: 40px;">
-                <a href="http://localhost:5000" style="display: inline-block; background: ${statusConfig.color}; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">Track Progress</a>
+                <a href="${siteUrl}" style="display: inline-block; background: ${statusConfig.color}; color: white; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 700; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);">Track Progress</a>
             </div>
         </div>
         <div style="background: #f8fafc; padding: 20px; text-align: center; border-top: 1px solid #e2e8f0;">
