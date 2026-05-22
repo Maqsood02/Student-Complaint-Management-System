@@ -1,3 +1,4 @@
+# Trigger Vercel build with updated environment variables
 import os
 import uuid
 import datetime
