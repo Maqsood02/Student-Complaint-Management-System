@@ -642,9 +642,24 @@ function parseDescription(desc) {
     return { location, description: cleanText };
 }
 
-window.viewComplaint = (id) => {
-    const c = allComplaints.find(item => item.id === id);
+window.viewComplaint = async (id) => {
+    let c = allComplaints.find(item => item.id === id);
     if (!c) return;
+
+    const loadingToast = showToast('Loading details...', 'info', 0);
+    try {
+        const res = await fetch(`${API_BASE}/complaints/detail/${id}`);
+        const data = await res.json();
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
+        if (res.ok && data && !data.error) {
+            c = data;
+        }
+    } catch (e) {
+        console.error("Failed to fetch full complaint detail:", e);
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
+    }
 
     const { location, description } = parseDescription(c.description);
 
@@ -744,9 +759,24 @@ window.viewComplaint = (id) => {
     modal.classList.add('active');
 };
 
-window.manageComplaint = (id) => {
-    const c = allComplaints.find(item => item.id === id);
+window.manageComplaint = async (id) => {
+    let c = allComplaints.find(item => item.id === id);
     if (!c) return;
+
+    const loadingToast = showToast('Loading details...', 'info', 0);
+    try {
+        const res = await fetch(`${API_BASE}/complaints/detail/${id}`);
+        const data = await res.json();
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
+        if (res.ok && data && !data.error) {
+            c = data;
+        }
+    } catch (e) {
+        console.error("Failed to fetch full complaint detail:", e);
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
+    }
 
     const { location, description } = parseDescription(c.description);
 
@@ -890,6 +920,7 @@ async function submitAdminUpdate(id) {
     const priority = document.getElementById('update-priority').value;
     const reply = document.getElementById('update-reply').value;
 
+    const loadingToast = showToast('Updating complaint & notifying student...', 'info', 0);
     try {
         const res = await fetch(`${API_BASE}/complaints/update`, {
             method: 'POST',
@@ -897,12 +928,20 @@ async function submitAdminUpdate(id) {
             body: JSON.stringify({ id, status, priority, reply })
         });
         const data = await res.json();
+        
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
+
         if (data.success) {
             showToast('Complaint updated successfully');
             modal.classList.remove('active');
             refreshData();
+        } else {
+            showToast(data.message || 'Update failed', 'danger');
         }
     } catch (err) {
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
         showToast('Update failed', 'danger');
     }
 }

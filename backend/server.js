@@ -253,9 +253,11 @@ app.post('/api/send-email', async (req, res) => {
             return res.json({ success: true, message: 'Verification email sent' });
         }
 
-        // --- CASE 3: ADMIN REPLY TO STUDENT ---
-        if (req.body.adminReply) {
-            console.log(`--- [EMAIL SERVICE] Sending Admin Reply alert to student: ${studentEmail} ---`);
+        const isStatusUpdate = req.body.status !== undefined && req.body.status !== null;
+
+        // --- CASE 3: ADMIN REPLY / STATUS UPDATE TO STUDENT ---
+        if (isStatusUpdate || req.body.adminReply) {
+            console.log(`--- [EMAIL SERVICE] Sending Admin Reply/Status Update alert to student: ${studentEmail} ---`);
             const html = getStudentReplyTemplate(req.body);
             await transporter.sendMail({
                 from: process.env.EMAIL_USER,

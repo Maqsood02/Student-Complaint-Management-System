@@ -134,11 +134,16 @@ def trigger_email_service_async(data):
                 host = "https://" + host[7:]
             data['siteUrl'] = host
 
-        thread = threading.Thread(target=trigger_email_service, args=(data,))
-        thread.daemon = True
-        thread.start()
+        # If on Vercel, execute synchronously to prevent container freezing and email lag
+        if os.getenv("VERCEL") == "1":
+            print("--- [VERCEL DETECTED] Sending email synchronously to prevent thread freezing ---")
+            trigger_email_service(data)
+        else:
+            thread = threading.Thread(target=trigger_email_service, args=(data,))
+            thread.daemon = True
+            thread.start()
     except Exception as e:
-        print(f"Failed to spawn email background thread: {e}")
+        print(f"Failed to spawn email background thread/send: {e}")
 
 
 # --- FRONTEND ROUTES ---
@@ -501,13 +506,35 @@ def get_complaints(user_role, user_id):
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
         
+        # Exclude attached_file base64 data to keep dashboard load times extremely fast
+        query_cols = "id, student_id, student_name, student_email, title, description, category, priority, status, admin_reply, created_at"
         if user_role == 'admin':
-            cursor.execute("SELECT * FROM complaints ORDER BY created_at DESC")
+            cursor.execute(f"SELECT {query_cols} FROM complaints ORDER BY created_at DESC")
         else:
-            cursor.execute("SELECT * FROM complaints WHERE student_id = %s ORDER BY created_at DESC", (user_id,))
+            cursor.execute(f"SELECT {query_cols} FROM complaints WHERE student_id = %s ORDER BY created_at DESC", (user_id,))
         
         complaints = cursor.fetchall()
         return jsonify(complaints)
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+@app.route('/api/complaints/detail/<complaint_id>', methods=['GET'])
+def get_complaint_detail(complaint_id):
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM complaints WHERE id = %s", (complaint_id,))
+        complaint = cursor.fetchone()
+        if not complaint:
+            return jsonify({"success": False, "message": "Complaint not found"}), 404
+        return jsonify(complaint)
     except Exception as e:
         return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
     finally:
