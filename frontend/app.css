@@ -912,6 +912,32 @@ input:focus, select:focus, textarea:focus {
     box-shadow: 0 8px 18px -4px rgba(99, 102, 241, 0.4);
 }
 
+.btn-secondary {
+    background: rgba(100, 116, 139, 0.08);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+}
+
+.btn-secondary:hover {
+    background: rgba(100, 116, 139, 0.15);
+    color: var(--text-main);
+    transform: translateY(-1px);
+}
+
+.btn-danger {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.15);
+    color: var(--danger);
+}
+
+.btn-danger:hover {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px -4px rgba(239, 68, 68, 0.4);
+}
+
 .checkbox-label {
     user-select: none;
     transition: var(--transition);
@@ -1927,6 +1953,7 @@ input:focus, select:focus, textarea:focus {
 @media (max-width: 768px) {
     .modal-student-profile-card {
         padding: 1.5rem;
+        margin: -2.5rem -2.5rem 1.5rem -2.5rem;
     }
     .profile-card-content {
         flex-direction: column;
@@ -1941,6 +1968,9 @@ input:focus, select:focus, textarea:focus {
     }
     .avatar-ring {
         border-radius: 20px;
+    }
+    .student-name-row h4 {
+        font-size: 1.2rem;
     }
 }
 
@@ -2041,13 +2071,17 @@ input:focus, select:focus, textarea:focus {
 
 @media (max-width: 576px) {
     #toast-container {
-        top: auto;
-        bottom: 1.5rem;
+        top: 1.5rem;
+        bottom: auto;
         right: 1.5rem;
         left: 1.5rem;
     }
     .toast {
         min-width: 100%;
+        transform: translateY(-20px) scale(0.95);
+    }
+    .toast.show {
+        transform: translateY(0) scale(1);
     }
 }
 
@@ -2286,6 +2320,26 @@ input:focus, select:focus, textarea:focus {
     }
     .modal-body {
         padding: 1.5rem;
+    }
+    .modal-student-profile-card {
+        margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+        padding: 1.25rem 1.5rem;
+        border-left-width: 5px;
+    }
+    .student-meta-grid {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .student-meta-item {
+        font-size: 0.8rem;
+    }
+    .description-box-modern {
+        padding: 1rem 1.25rem;
+        font-size: 0.95rem;
+    }
+    .modal-management-actions-form {
+        padding-top: 1.5rem;
+        margin-top: 1.5rem;
     }
 }
 
