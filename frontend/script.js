@@ -13,6 +13,18 @@ function openLightbox(src) {
     }
 }
 
+// Global Helper for broken evidence images
+window.handleImageError = function(img) {
+    img.onerror = null;
+    const wrapper = img.closest('.evidence-thumbnail-wrapper');
+    if (wrapper) {
+        wrapper.outerHTML = `<div style="background: rgba(239, 68, 68, 0.05); border: 1px dashed var(--danger); border-radius: var(--radius-sm); padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; color: var(--danger); width: 100%; min-width: 200px; box-sizing: border-box;">
+            <i class="fa-solid fa-image-slash" style="font-size: 1.8rem; opacity: 0.8; margin-bottom: 4px;"></i>
+            <span style="font-size: 0.82rem; font-weight: 700; text-align: center;">Evidence image not found</span>
+        </div>`;
+    }
+};
+
 // Client-side image compression helper
 function compressImage(file, maxWidth = 1000, maxHeight = 1000, quality = 0.7) {
     return new Promise((resolve, reject) => {
@@ -730,7 +742,7 @@ window.viewComplaint = async (id) => {
                 </label>
                 <div class="evidence-gallery-card">
                     <div class="evidence-thumbnail-wrapper" onclick="openLightbox('${evidenceSrc}')">
-                        <img src="${evidenceSrc}" alt="Evidence" class="evidence-thumbnail-img" onerror="this.onerror=null; this.closest('.evidence-thumbnail-wrapper').outerHTML=\`<div style='background: rgba(0,0,0,0.15); border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; color: var(--text-muted);'><i class='fa-solid fa-image-slash' style='font-size: 2rem; color: var(--danger); opacity: 0.8;'></i><span style='font-size: 0.85rem; font-weight: 650;'>Evidence image not found</span></div>\`;">
+                        <img src="${evidenceSrc}" alt="Evidence" class="evidence-thumbnail-img" onerror="handleImageError(this)">
                         <div class="evidence-overlay-hover">
                             <i class="fa-solid fa-magnifying-glass-plus"></i>
                             <span>View Full Screen</span>
@@ -858,7 +870,7 @@ window.manageComplaint = async (id) => {
                 </label>
                 <div class="evidence-gallery-card">
                     <div class="evidence-thumbnail-wrapper" onclick="openLightbox('${evidenceSrc}')">
-                        <img src="${evidenceSrc}" alt="Evidence" class="evidence-thumbnail-img" onerror="this.onerror=null; this.closest('.evidence-thumbnail-wrapper').outerHTML=\`<div style='background: rgba(0,0,0,0.15); border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; color: var(--text-muted);'><i class='fa-solid fa-image-slash' style='font-size: 2rem; color: var(--danger); opacity: 0.8;'></i><span style='font-size: 0.85rem; font-weight: 650;'>Evidence image not found</span></div>\`;">
+                        <img src="${evidenceSrc}" alt="Evidence" class="evidence-thumbnail-img" onerror="handleImageError(this)">
                         <div class="evidence-overlay-hover">
                             <i class="fa-solid fa-magnifying-glass-plus"></i>
                             <span>View Full Screen</span>

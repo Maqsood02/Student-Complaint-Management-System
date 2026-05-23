@@ -1650,6 +1650,8 @@ input:focus, select:focus, textarea:focus {
 }
 .evidence-thumbnail-img {
     max-height: 200px;
+    min-height: 120px;
+    min-width: 120px;
     width: auto;
     object-fit: cover;
     border-radius: var(--radius-sm);
