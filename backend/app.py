@@ -150,7 +150,7 @@ def trigger_email_service_async(data):
 
 @app.route('/')
 def index():
-    return send_from_directory(app.static_folder, 'index.html')
+    return send_from_directory(app.static_folder, 'index.html', max_age=0)
 
 @app.route('/<path:path>')
 def serve_static(path):
@@ -158,7 +158,7 @@ def serve_static(path):
     if os.path.exists(os.path.join(app.static_folder, path)):
         return send_from_directory(app.static_folder, path)
     # Otherwise, fallback to index.html for SPA routing
-    return send_from_directory(app.static_folder, 'index.html')
+    return send_from_directory(app.static_folder, 'index.html', max_age=0)
 
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
