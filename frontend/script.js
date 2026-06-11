@@ -2052,7 +2052,6 @@ function renderAdminView(complaints) {
     const manageBody = document.getElementById('adm-manage-table-body');
     manageBody.innerHTML = '';
 
-    // Populate recent action items table on Admin Overview (High-Priority complaints first, up to 5)
     const recentBody = document.getElementById('adm-recent-table-body');
     if (recentBody) {
         recentBody.innerHTML = '';
@@ -2082,15 +2081,46 @@ function renderAdminView(complaints) {
                 </tr>
             `;
         }
-    }
-        const highPriorityFirst = [...complaints].sort((a, b) => {
-            const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
-            return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
-        });
-        highPriorityFirst.slice(0, 5).forEach(c => {
+    } else {
+        if (recentBody) {
+            const highPriorityFirst = [...complaints].sort((a, b) => {
+                const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
+                return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
+            });
+            highPriorityFirst.slice(0, 5).forEach(c => {
+                const statusClass = c.status.toLowerCase().replace(/\s+/g, '');
+                const priorityClass = c.priority.toLowerCase();
+                recentBody.innerHTML += `
+                    <tr class="animate-up">
+                        <td class="nowrap"><strong style="color: var(--primary);">#${c.id}</strong></td>
+                        <td class="nowrap">
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(c.student_name)}&background=random&color=fff&bold=true&size=36" style="border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                                <span style="font-weight: 700;">${c.student_name}</span>
+                            </div>
+                        </td>
+                        <td><span style="font-weight: 700;">${c.title}</span></td>
+                        <td><span style="opacity: 0.8;">${c.category}</span></td>
+                        <td class="nowrap">
+                            <span class="priority-badge ${priorityClass}">
+                                <i class="fa-solid fa-circle" style="font-size: 0.45rem;"></i> ${c.priority}
+                            </span>
+                        </td>
+                        <td class="nowrap"><span class="status-badge status-${statusClass}">${c.status}</span></td>
+                        <td class="nowrap">
+                            <button class="btn" onclick="openAssignModal('${c.id}')" style="padding: 0.4rem 1rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #3b82f6; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.3s ease; box-sizing: border-box; height: 32px; font-weight: 700;">
+                                Assign <i class="fa-solid fa-user-check"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        complaints.forEach(c => {
             const statusClass = c.status.toLowerCase().replace(/\s+/g, '');
             const priorityClass = c.priority.toLowerCase();
-            recentBody.innerHTML += `
+            manageBody.innerHTML += `
                 <tr class="animate-up">
                     <td class="nowrap"><strong style="color: var(--primary);">#${c.id}</strong></td>
                     <td class="nowrap">
@@ -2099,7 +2129,6 @@ function renderAdminView(complaints) {
                             <span style="font-weight: 700;">${c.student_name}</span>
                         </div>
                     </td>
-                    <td><span style="font-weight: 700;">${c.title}</span></td>
                     <td><span style="opacity: 0.8;">${c.category}</span></td>
                     <td class="nowrap">
                         <span class="priority-badge ${priorityClass}">
@@ -2107,8 +2136,11 @@ function renderAdminView(complaints) {
                         </span>
                     </td>
                     <td class="nowrap"><span class="status-badge status-${statusClass}">${c.status}</span></td>
-                    <td class="nowrap">
-                        <button class="btn" onclick="openAssignModal('${c.id}')" style="padding: 0.4rem 1rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #3b82f6; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.3s ease; box-sizing: border-box; height: 32px; font-weight: 700;">
+                    <td class="nowrap" style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button class="btn btn-primary" onclick="manageComplaint('${c.id}')" style="padding: 0.45rem 1.25rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; height: 36px;">
+                            Review <i class="fa-solid fa-sliders"></i>
+                        </button>
+                        <button class="btn" onclick="openAssignModal('${c.id}')" style="padding: 0.45rem 1.25rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #3b82f6; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.3s ease; box-sizing: border-box; height: 36px; font-weight: 700;">
                             Assign <i class="fa-solid fa-user-check"></i>
                         </button>
                     </td>
@@ -2116,37 +2148,6 @@ function renderAdminView(complaints) {
             `;
         });
     }
-
-    complaints.forEach(c => {
-        const statusClass = c.status.toLowerCase().replace(/\s+/g, '');
-        const priorityClass = c.priority.toLowerCase();
-        manageBody.innerHTML += `
-            <tr class="animate-up">
-                <td class="nowrap"><strong style="color: var(--primary);">#${c.id}</strong></td>
-                <td class="nowrap">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(c.student_name)}&background=random&color=fff&bold=true&size=36" style="border-radius: 12px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
-                        <span style="font-weight: 700;">${c.student_name}</span>
-                    </div>
-                </td>
-                <td><span style="opacity: 0.8;">${c.category}</span></td>
-                <td class="nowrap">
-                    <span class="priority-badge ${priorityClass}">
-                        <i class="fa-solid fa-circle" style="font-size: 0.45rem;"></i> ${c.priority}
-                    </span>
-                </td>
-                <td class="nowrap"><span class="status-badge status-${statusClass}">${c.status}</span></td>
-                <td class="nowrap" style="display: flex; gap: 0.5rem; align-items: center;">
-                    <button class="btn btn-primary" onclick="manageComplaint('${c.id}')" style="padding: 0.45rem 1.25rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; height: 36px;">
-                        Review <i class="fa-solid fa-sliders"></i>
-                    </button>
-                    <button class="btn" onclick="openAssignModal('${c.id}')" style="padding: 0.45rem 1.25rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #3b82f6; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.3s ease; box-sizing: border-box; height: 36px; font-weight: 700;">
-                        Assign <i class="fa-solid fa-user-check"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-    });
 }
 
 // --- COMPLAINT SUBMISSION ---
