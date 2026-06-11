@@ -38,7 +38,9 @@ db_config = {
     "port": _db_port,
     "user": os.getenv("DB_USER", "root"),
     "password": _db_pass,
-    "database": os.getenv("DB_NAME", "scms_db")
+    "database": os.getenv("DB_NAME", "scms_db"),
+    "charset": "utf8mb4",
+    "use_unicode": True
 }
 
 # Upload Folder Configuration (use /tmp on Vercel to bypass read-only filesystem restrictions)
@@ -346,14 +348,38 @@ def login():
         email = data.get('email')
         password = data.get('password')
 
+        identifier = email.strip() if email else ""
+        user = None
+
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-        user = cursor.fetchone()
+        
+        is_emp_format = False
+        if identifier.upper().startswith("EMP-"):
+            is_emp_format = True
+            try:
+                emp_id = int(identifier[4:])
+                cursor.execute("SELECT * FROM users WHERE id = %s AND role = 'employee'", (emp_id,))
+                user = cursor.fetchone()
+            except ValueError:
+                pass
+        else:
+            cursor.execute("SELECT * FROM users WHERE email = %s", (identifier,))
+            user = cursor.fetchone()
+            
+            if user and user['role'] == 'employee':
+                cursor.close()
+                conn.close()
+                return jsonify({
+                    "success": False, 
+                    "message": "Employees must log in using their Employee ID (e.g., EMP-XXX)"
+                }), 400
+
         cursor.close()
         conn.close()
 
         if user and bcrypt.check_password_hash(user['password'], password):
+            # If the user logged in successfully, return their details
             return jsonify({
                 "success": True,
                 "user": {
@@ -364,7 +390,9 @@ def login():
                 }
             })
         
-        return jsonify({"success": False, "message": "Invalid email or password"}), 401
+        # Guide message in case of typo/incorrect ID or email
+        ident_label = "Employee ID" if is_emp_format else "email"
+        return jsonify({"success": False, "message": f"Invalid {ident_label} or password"}), 401
     except Exception as e:
         print(f"DEBUG LOGIN ERROR: {e}")
         return jsonify({"success": False, "message": f"Database Error: {str(e)}"}), 500
@@ -507,13 +535,25 @@ def get_complaints(user_role, user_id):
         cursor = conn.cursor(dictionary=True)
         
         # Exclude attached_file base64 data to keep dashboard load times extremely fast
-        query_cols = "id, student_id, student_name, student_email, title, description, category, priority, status, admin_reply, created_at"
+        query_cols = "id, student_id, student_name, student_email, title, description, category, priority, status, admin_reply, assigned_to, assigned_to_name, resolution_deadline, created_at"
         if user_role == 'admin':
             cursor.execute(f"SELECT {query_cols} FROM complaints ORDER BY created_at DESC")
+        elif user_role == 'employee':
+            cursor.execute(f"SELECT {query_cols} FROM complaints WHERE assigned_to = %s ORDER BY created_at DESC", (user_id,))
         else:
             cursor.execute(f"SELECT {query_cols} FROM complaints WHERE student_id = %s ORDER BY created_at DESC", (user_id,))
         
         complaints = cursor.fetchall()
+        
+        # Format resolution_deadline and created_at if necessary
+        for comp in complaints:
+            if 'resolution_deadline' in comp and comp['resolution_deadline']:
+                if isinstance(comp['resolution_deadline'], (datetime.datetime, datetime.date)):
+                    comp['resolution_deadline'] = comp['resolution_deadline'].strftime('%Y-%m-%d %H:%M:%S')
+            if 'created_at' in comp and comp['created_at']:
+                if isinstance(comp['created_at'], (datetime.datetime, datetime.date)):
+                    comp['created_at'] = comp['created_at'].isoformat()
+                    
         return jsonify(complaints)
     except Exception as e:
         return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
@@ -549,50 +589,142 @@ def update_complaint():
     cid = data.get('id')
     status = data.get('status')
     priority = data.get('priority')
-    reply = data.get('reply')
+    reply = data.get('reply') # employee notes / admin reply
+    updater_role = data.get('updater_role')
+    employee_name = data.get('employee_name')
+    worker_evidence = data.get('worker_evidence') # base64 encoded proof image
 
     conn = None
     cursor = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        # 1. Fetch Student Details
-        cursor.execute("SELECT student_id, student_email, student_name, title FROM complaints WHERE id = %s", (cid,))
+        # Fetch details
+        cursor.execute("SELECT student_id, student_email, student_name, title, assigned_to_name, worker_evidence, worker_notes FROM complaints WHERE id = %s", (cid,))
         comp = cursor.fetchone()
         
         if not comp:
             return jsonify({"success": False, "message": "Complaint not found"}), 404
 
-        # 2. Update Complaint
-        cursor.execute("""
-            UPDATE complaints SET status = %s, priority = %s, admin_reply = %s WHERE id = %s
-        """, (status, priority, reply, cid))
-        
-        # 3. Add Smart Notification
-        msg = f"Your complaint '{comp['title']}' is now {status}."
-        if status == "Resolved":
-            msg = f"✅ Success! Your complaint '{comp['title']}' has been resolved."
-        elif status == "In Progress":
-            msg = f"⏳ Update: Work has started on your complaint '{comp['title']}'."
+        if updater_role == 'employee':
+            # Enforce proof of work evidence if marking as Resolved
+            db_status = status
+            if status == "Resolved":
+                db_status = "Under Review"
+                if not worker_evidence or not str(worker_evidence).strip():
+                    return jsonify({"success": False, "message": "Uploading proof of work evidence is mandatory to resolve a complaint."}), 400
             
-        cursor.execute("""
-            INSERT INTO notifications (user_id, complaint_id, message) VALUES (%s, %s, %s)
-        """, (comp['student_id'], cid, msg))
-        
-        conn.commit()
+            # Update complaints table with worker notes and evidence
+            cursor.execute("""
+                UPDATE complaints 
+                SET status = %s, worker_notes = %s, worker_evidence = %s 
+                WHERE id = %s
+            """, (db_status, reply, worker_evidence, cid))
+            
+            # Notify all admins in the database
+            cursor.execute("SELECT id FROM users WHERE role = 'admin'")
+            admins = cursor.fetchall()
+            
+            admin_msg = f"Worker {employee_name or comp.get('assigned_to_name', 'Employee')} updated complaint '{comp['title']}' to {db_status}."
+            if status == "Resolved":
+                admin_msg = f"📋 Review Required! Worker {employee_name or comp.get('assigned_to_name', 'Employee')} marked complaint '{comp['title']}' as Resolved. Review proof of work."
+            
+            for admin in admins:
+                cursor.execute("""
+                    INSERT INTO notifications (user_id, complaint_id, message) 
+                    VALUES (%s, %s, %s)
+                """, (admin['id'], cid, admin_msg))
+                
+            conn.commit()
+            
+            # Trigger email notification to admins
+            admin_email_data = {
+                "category": "Admin Status Update",
+                "employeeName": employee_name or comp.get('assigned_to_name', 'Employee'),
+                "complaintId": cid,
+                "title": comp['title'],
+                "status": db_status,
+                "adminReply": reply or "No notes provided."
+            }
+            trigger_email_service_async(admin_email_data)
+            
+            return jsonify({"success": True, "message": "Progress details submitted to admins successfully."})
+            
+        else:
+            # Updater is admin
+            if priority:
+                cursor.execute("""
+                    UPDATE complaints SET status = %s, priority = %s, admin_reply = %s WHERE id = %s
+                """, (status, priority, reply, cid))
+            else:
+                cursor.execute("""
+                    UPDATE complaints SET status = %s, admin_reply = %s WHERE id = %s
+                """, (status, reply, cid))
+            
+            # Smart notification for Student
+            msg = f"Your complaint '{comp['title']}' is now {status}."
+            if status == "Resolved":
+                msg = f"Success! Your complaint '{comp['title']}' has been resolved."
+            elif status == "In Progress":
+                msg = f"Update: Work has started on your complaint '{comp['title']}'."
+                
+            cursor.execute("""
+                INSERT INTO notifications (user_id, complaint_id, message) VALUES (%s, %s, %s)
+            """, (comp['student_id'], cid, msg))
+            
+            conn.commit()
+            
+            # Trigger Email to Student in background
+            # Safely decode worker_evidence (MySQL can return it as bytes)
+            raw_evidence = comp.get('worker_evidence')
+            if isinstance(raw_evidence, (bytes, bytearray)):
+                raw_evidence = raw_evidence.decode('utf-8', errors='ignore')
+            elif raw_evidence:
+                raw_evidence = str(raw_evidence)
 
-        # 4. Trigger Email to Student in background
-        email_data = {
-            "studentEmail": comp['student_email'],
-            "studentName": comp['student_name'],
-            "complaintId": cid,
-            "title": comp['title'],
-            "status": status,
-            "adminReply": reply
-        }
-        trigger_email_service_async(email_data)
+            raw_notes = comp.get('worker_notes')
+            if isinstance(raw_notes, (bytes, bytearray)):
+                raw_notes = raw_notes.decode('utf-8', errors='ignore')
+            elif raw_notes:
+                raw_notes = str(raw_notes)
 
-        return jsonify({"success": True})
+            email_data = {
+                "studentEmail": comp['student_email'],
+                "studentName": comp['student_name'],
+                "complaintId": cid,
+                "title": comp['title'],
+                "status": status,
+                "adminReply": reply,
+                "workerEvidence": raw_evidence if raw_evidence else None,
+                "workerNotes": raw_notes if raw_notes else None
+            }
+            trigger_email_service_async(email_data)
+            
+            return jsonify({"success": True, "message": "Complaint updated successfully and student notified."})
+
+
+    except Exception as e:
+        print(f"DEBUG UPDATE COMPLAINT ERROR: {e}")
+        return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
+# Store pending employee registrations
+pending_employees = {}
+
+@app.route('/api/admin/employees', methods=['GET'])
+def admin_get_employees():
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT id, name, email, role FROM users WHERE role = 'employee' ORDER BY name ASC")
+        employees = cursor.fetchall()
+        return jsonify(employees)
     except Exception as e:
         return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
     finally:
@@ -601,6 +733,178 @@ def update_complaint():
         if conn:
             conn.close()
 
+@app.route('/api/admin/send-employee-otp', methods=['POST'])
+def send_employee_otp():
+    try:
+        data = request.json
+        name = data.get('name')
+        email = data.get('email')
+        password = data.get('password')
+        
+        if not email or not name or not password:
+            return jsonify({"success": False, "message": "Missing fields"}), 400
+            
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+        if cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Email already registered"}), 400
+        cursor.close()
+        conn.close()
+        
+        otp = str(random.randint(100000, 999999))
+        print(f"--- [EMPLOYEE OTP DEBUG] CODE FOR {email}: {otp} ---")
+        pending_employees[email] = {
+            "name": name,
+            "password": password,
+            "otp": otp,
+            "timestamp": datetime.datetime.now()
+        }
+        
+        trigger_email_service_async({
+            "employeeEmail": email,
+            "employeeName": name,
+            "category": "Employee OTP",
+            "title": "Employee Verification Code",
+            "otp": otp,
+            "description": f"Verification code is: {otp}",
+            "complaintId": "EMP-VERIFY"
+        })
+        
+        return jsonify({"success": True, "message": "OTP sent to employee's email."})
+    except Exception as e:
+        print(f"EMPLOYEE OTP SEND ERROR: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/admin/verify-employee-otp', methods=['POST'])
+def verify_employee_otp():
+    try:
+        data = request.json
+        email = data.get('email')
+        otp = data.get('otp')
+        
+        if not email or not otp:
+            return jsonify({"success": False, "message": "Email and OTP required"}), 400
+            
+        emp_data = pending_employees.get(email)
+        if not emp_data:
+            return jsonify({"success": False, "message": "No pending employee registration found"}), 404
+            
+        if emp_data['otp'] != otp:
+            return jsonify({"success": False, "message": "Invalid OTP code"}), 400
+            
+        hashed_pw = bcrypt.generate_password_hash(emp_data['password']).decode('utf-8')
+        
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO users (name, email, password, role) VALUES (%s, %s, %s, 'employee')",
+                       (emp_data['name'], email, hashed_pw))
+        user_id = cursor.lastrowid
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        emp_id_str = f"EMP-{str(user_id).zfill(3)}"
+        
+        # Send Credentials Email
+        trigger_email_service_async({
+            "employeeEmail": email,
+            "employeeName": emp_data['name'],
+            "employeePassword": emp_data['password'],
+            "employeeId": emp_id_str,
+            "category": "Employee Credentials",
+            "complaintId": "EMP-CREDS"
+        })
+        
+        del pending_employees[email]
+        return jsonify({"success": True, "message": "Employee registered successfully and credentials emailed."})
+    except Exception as e:
+        print(f"EMPLOYEE OTP VERIFY ERROR: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/complaints/assign', methods=['POST'])
+def assign_complaint():
+    try:
+        data = request.json
+        complaint_id = data.get('complaintId')
+        employee_id = data.get('employeeId')
+        employee_name = data.get('employeeName')
+        deadline_str = data.get('deadline') # ISO string format
+        
+        if not complaint_id or not employee_id or not employee_name:
+            return jsonify({"success": False, "message": "Missing assignment fields"}), 400
+            
+        # Format resolution deadline if provided
+        deadline = None
+        if deadline_str:
+            try:
+                if 'T' in deadline_str:
+                    deadline = datetime.datetime.strptime(deadline_str.replace('Z', ''), '%Y-%m-%dT%H:%M')
+                else:
+                    deadline = datetime.datetime.strptime(deadline_str, '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                try:
+                    deadline = datetime.datetime.fromisoformat(deadline_str.replace('Z', ''))
+                except Exception:
+                    pass
+                    
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # Get employee details
+        cursor.execute("SELECT name, email FROM users WHERE id = %s", (employee_id,))
+        employee = cursor.fetchone()
+        if not employee:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Employee not found"}), 404
+            
+        # Update complaint assignment
+        cursor.execute("SELECT status, title, description, category, student_email FROM complaints WHERE id = %s", (complaint_id,))
+        comp = cursor.fetchone()
+        if not comp:
+            cursor.close()
+            conn.close()
+            return jsonify({"success": False, "message": "Complaint not found"}), 404
+            
+        new_status = 'In Progress' if comp['status'] == 'Pending' else comp['status']
+        
+        cursor.execute("""
+            UPDATE complaints 
+            SET assigned_to = %s, assigned_to_name = %s, resolution_deadline = %s, status = %s 
+            WHERE id = %s
+        """, (employee_id, employee['name'], deadline, new_status, complaint_id))
+        
+        # Insert Notification for Employee
+        deadline_msg = f" Deadline: {deadline.strftime('%Y-%m-%d %H:%M')}" if deadline else ""
+        cursor.execute("""
+            INSERT INTO notifications (user_id, complaint_id, message) 
+            VALUES (%s, %s, %s)
+        """, (employee_id, complaint_id, f"📋 Complaint '{comp['title']}' has been assigned to you.{deadline_msg}"))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        # Send Email to Worker
+        trigger_email_service_async({
+            "employeeEmail": employee['email'],
+            "employeeName": employee['name'],
+            "category": "Worker Assignment",
+            "title": comp['title'],
+            "description": comp['description'],
+            "complaintId": complaint_id,
+            "deadline": deadline_str,
+            "category_name": comp['category']
+        })
+        
+        return jsonify({"success": True, "message": "Complaint assigned successfully."})
+    except Exception as e:
+        print(f"ASSIGN ERROR: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+
 @app.route('/api/admin/users', methods=['GET'])
 def admin_get_users():
     conn = None
@@ -608,7 +912,7 @@ def admin_get_users():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT id, name, email, role FROM users ORDER BY name ASC")
+        cursor.execute("SELECT id, name, email, role FROM users WHERE role != 'employee' ORDER BY name ASC")
         users = cursor.fetchall()
         return jsonify(users)
     except Exception as e:
@@ -740,6 +1044,77 @@ def change_password():
     except Exception as e:
         print(f"CHANGE PASSWORD ERROR: {e}")
         return jsonify({"success": False, "message": str(e)}), 500
+
+@app.route('/api/complaints/overdue-notify', methods=['POST'])
+def overdue_notify():
+    """Called by the frontend countdown timer when a deadline expires."""
+    data = request.json
+    complaint_id = data.get('complaintId')
+    if not complaint_id:
+        return jsonify({"success": False, "message": "Missing complaintId"}), 400
+
+    conn = None
+    cursor = None
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        # Only notify if complaint is still active (not yet resolved / under review)
+        cursor.execute(
+            "SELECT id, title, assigned_to, assigned_to_name, resolution_deadline, status FROM complaints WHERE id = %s",
+            (complaint_id,)
+        )
+        comp = cursor.fetchone()
+        if not comp:
+            return jsonify({"success": False, "message": "Complaint not found"}), 404
+
+        if comp['status'] in ('Resolved', 'Under Review'):
+            return jsonify({"success": True, "message": "Complaint already resolved/under review — no alert needed."})
+
+        # Build overdue notification for all admins
+        cursor.execute("SELECT id FROM users WHERE role = 'admin'")
+        admins = cursor.fetchall()
+
+        deadline_str = ""
+        if comp['resolution_deadline']:
+            if isinstance(comp['resolution_deadline'], (datetime.datetime, datetime.date)):
+                deadline_str = comp['resolution_deadline'].strftime('%Y-%m-%d %H:%M')
+            else:
+                deadline_str = str(comp['resolution_deadline'])
+
+        overdue_msg = (
+            f"⚠️ OVERDUE ALERT! Complaint '{comp['title']}' assigned to "
+            f"{comp['assigned_to_name'] or 'an employee'} has exceeded its deadline"
+            f"{' (' + deadline_str + ')' if deadline_str else ''}. Immediate action required."
+        )
+
+        for admin in admins:
+            cursor.execute(
+                "INSERT INTO notifications (user_id, complaint_id, message) VALUES (%s, %s, %s)",
+                (admin['id'], complaint_id, overdue_msg)
+            )
+        conn.commit()
+
+        # Send admin alert email
+        trigger_email_service_async({
+            "category": "Deadline Overdue",
+            "complaintId": complaint_id,
+            "title": comp['title'],
+            "employeeName": comp['assigned_to_name'] or "Assigned Employee",
+            "deadline": deadline_str,
+            "status": comp['status']
+        })
+
+        return jsonify({"success": True, "message": "Overdue alert sent to admins."})
+    except Exception as e:
+        print(f"OVERDUE NOTIFY ERROR: {e}")
+        return jsonify({"success": False, "message": str(e)}), 500
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

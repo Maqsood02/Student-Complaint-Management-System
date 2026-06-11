@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <!-- Custom CSS -->
-    <link rel="stylesheet" href="app.css?v=20260607.6">
+    <link rel="stylesheet" href="app.css?v=20260610.8">
 </head>
 
 <body>
@@ -79,11 +79,11 @@
                             <p>Enter your credentials to access the portal.</p>
                         </div>
                         <div class="form-group">
-                            <label for="login-email">Email Address</label>
+                            <label for="login-email">Email / Employee ID</label>
                             <div class="input-icon">
-                                <i class="fa-regular fa-envelope"></i>
-                                <input type="email" id="login-email" placeholder="student@university.edu" required
-                                    autocomplete="email">
+                                <i class="fa-solid fa-user-shield"></i>
+                                <input type="text" id="login-email" placeholder="student@university.edu or EMP-XXX" required
+                                    autocomplete="username">
                             </div>
                         </div>
                         <div class="form-group">
@@ -263,9 +263,19 @@
                             class="fa-solid fa-list-check"></i> Management</a></li>
                 <li><a href="#" class="nav-link" data-target="register-users" id="nav-adm-register"><i
                             class="fa-solid fa-user-plus"></i> Register Users</a></li>
+                <li><a href="#" class="nav-link" data-target="manage-employees" id="nav-adm-employees"><i
+                            class="fa-solid fa-user-tie"></i> Manage Employees</a></li>
                 <li><a href="#" class="nav-link" data-target="manage-users" id="nav-adm-users"><i
                             class="fa-solid fa-user-gear"></i> Manage Accounts</a></li>
                 <li><a href="#" class="nav-link" data-target="security-settings" id="nav-adm-security"><i
+                            class="fa-solid fa-shield-halved"></i> Security</a></li>
+            </ul>
+
+            <ul class="nav-links hidden" id="employee-nav">
+                <li class="nav-label">Worker Portal</li>
+                <li><a href="#" class="nav-link active" data-target="employee-dashboard" id="nav-emp-dashboard"><i
+                            class="fa-solid fa-clipboard-list"></i> My Tasks</a></li>
+                <li><a href="#" class="nav-link" data-target="security-settings" id="nav-emp-security"><i
                             class="fa-solid fa-shield-halved"></i> Security</a></li>
             </ul>
         </aside>
@@ -646,6 +656,7 @@
                                         <th>Category</th>
                                         <th>Priority</th>
                                         <th>Status</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="adm-recent-table-body"></tbody>
@@ -828,6 +839,161 @@
                     </div>
                 </section>
 
+                <!-- ADMIN MANAGE EMPLOYEES SECTION -->
+                <section id="manage-employees" class="page-section">
+                    <div class="section-header animate-up">
+                        <h1>Manage Employees</h1>
+                        <p>Register new staff members, verify their email addresses, and view active employees.</p>
+                    </div>
+
+                             <!-- Employee Creation Form Card -->
+                        <div class="content-card" style="box-sizing: border-box;">
+                            <div class="card-header" style="margin-bottom: 1.5rem;">
+                                <h3>Add New Employee</h3>
+                            </div>
+                            
+                            <!-- Register Fields Form -->
+                            <form id="admin-create-employee-form" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                                <div class="form-group">
+                                    <label for="emp-reg-name">Full Name *</label>
+                                    <div class="input-icon">
+                                        <i class="fa-regular fa-user"></i>
+                                        <input type="text" id="emp-reg-name" placeholder="Johnathan Doe" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="emp-reg-email">Email Address *</label>
+                                    <div style="display: flex; gap: 0.5rem; flex-wrap: nowrap; width: 100%; align-items: center;">
+                                        <div class="input-icon" style="flex: 1;">
+                                            <i class="fa-regular fa-envelope"></i>
+                                            <input type="email" id="emp-reg-email" placeholder="employee@gmu.ac.in" required style="padding-right: 0.5rem; height: 46px; box-sizing: border-box;">
+                                        </div>
+                                        <button type="button" class="btn" id="emp-send-otp-btn" style="border-radius: var(--radius-sm); padding: 0 1.5rem; height: 46px; font-size: 0.9rem; font-weight: 700; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); color: var(--primary); cursor: pointer; transition: all 0.3s ease; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;">
+                                            Send OTP <i class="fa-solid fa-paper-plane" style="font-size: 0.8rem;"></i>
+                                        </button>
+                                    </div>
+                                    <!-- OTP Input (Initially Hidden) -->
+                                    <div id="emp-otp-input-wrapper" class="hidden" style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: nowrap; width: 100%; align-items: center;">
+                                        <div class="input-icon" style="flex: 1;">
+                                            <i class="fa-solid fa-key"></i>
+                                            <input type="text" id="emp-otp-input" placeholder="Enter OTP Code" maxlength="6" style="text-align: center; letter-spacing: 2px; padding-left: 2.5rem; height: 46px; box-sizing: border-box;">
+                                        </div>
+                                        <button type="button" class="btn" id="emp-verify-otp-btn" style="border-radius: var(--radius-sm); padding: 0 1.5rem; height: 46px; font-size: 0.9rem; font-weight: 700; background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%); color: white; border: none; cursor: pointer; transition: all 0.3s ease; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; box-shadow: 0 4px 12px -3px rgba(99, 102, 241, 0.3);">
+                                            Verify <i class="fa-solid fa-shield-check" style="font-size: 0.8rem;"></i>
+                                        </button>
+                                    </div>
+                                    <small id="emp-email-status" class="hidden" style="color: var(--success); font-weight: 700; margin-top: 6px; display: block; font-size: 0.82rem;"><i class="fa-solid fa-circle-check"></i> Email verified successfully</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="emp-reg-password">Temporary Password *</label>
+                                    <div class="input-icon">
+                                        <i class="fa-solid fa-lock"></i>
+                                        <input type="password" id="emp-reg-password" placeholder="••••••••" required>
+                                    </div>
+                                </div>
+                                
+                                <button type="submit" class="btn btn-primary btn-block" id="emp-register-submit-btn" disabled style="opacity: 0.5; pointer-events: none;">
+                                    Create Employee Account <i class="fa-solid fa-user-plus"></i>
+                                </button>
+                            </form>
+                        </div>
+
+                        <!-- Employee Directory List Card -->
+                        <div class="content-card" style="box-sizing: border-box;">
+                            <div class="card-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                                <h3>Employee Directory</h3>
+                                <div class="search-bar" style="max-width: 250px; width: 100%;">
+                                    <i class="fa-solid fa-magnifying-glass"></i>
+                                    <input type="text" placeholder="Search employees..." id="adm-search-employees">
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Employee ID</th>
+                                            <th>Name</th>
+                                            <th>Email</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="adm-employees-table-body">
+                                        <tr>
+                                            <td colspan="3" style="text-align: center; color: var(--text-muted);">No employees registered yet.</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- EMPLOYEE/WORKER DASHBOARD SECTION -->
+                <section id="employee-dashboard" class="page-section">
+                    <div class="section-header animate-up" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                        <div>
+                            <h1>Worker Task Control</h1>
+                            <p>Manage and resolve student complaints assigned to you.</p>
+                        </div>
+                    </div>
+
+                    <div class="stats-grid animate-up">
+                        <div class="stat-card">
+                            <div class="stat-icon-wrapper" style="color: #3b82f6; background: rgba(59, 130, 246, 0.1);">
+                                <i class="fa-solid fa-list-check"></i>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Assigned Tasks</h3>
+                                <p class="stat-number" id="emp-assigned-count">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon-wrapper" style="color: #f59e0b; background: rgba(245, 158, 11, 0.1);">
+                                <i class="fa-solid fa-spinner"></i>
+                            </div>
+                            <div class="stat-details">
+                                <h3>In Progress</h3>
+                                <p class="stat-number" id="emp-progress-count">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon-wrapper" style="color: #10b981; background: rgba(16, 185, 129, 0.1);">
+                                <i class="fa-solid fa-circle-check"></i>
+                            </div>
+                            <div class="stat-details">
+                                <h3>Resolved Tasks</h3>
+                                <p class="stat-number" id="emp-resolved-count">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="content-card animate-up" style="margin-top: 2rem;">
+                        <div class="card-header">
+                            <h3>Assigned Complaints Registry</h3>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Complaint ID</th>
+                                        <th>Subject</th>
+                                        <th>Category</th>
+                                        <th>Deadline Limit</th>
+                                        <th>Priority</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="emp-tasks-table-body">
+                                    <tr>
+                                        <td colspan="7" style="text-align: center; color: var(--text-muted);">No assigned complaints at the moment.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -972,7 +1138,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260607.6"></script>
+    <script src="script.js?v=20260610.8"></script>
 </body>
 
 </html>

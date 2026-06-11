@@ -586,18 +586,32 @@ function showDashboard() {
     document.getElementById('dropdown-user-email').textContent = currentUser.email || 'No email provided';
     const roleEl = document.querySelector('.user-role');
     if (roleEl) {
-        roleEl.textContent = currentUser.role === 'admin' ? 'System Administrator' : 'Student Scholar';
+        if (currentUser.role === 'admin') {
+            roleEl.textContent = 'System Administrator';
+        } else if (currentUser.role === 'employee') {
+            roleEl.textContent = `Support Specialist (EMP-${currentUser.id.toString().padStart(3, '0')})`;
+        } else {
+            roleEl.textContent = 'Student Scholar';
+        }
     }
     document.getElementById('user-avatar').src = `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUser.name)}&background=8b5cf6&color=fff&rounded=true&bold=true`;
 
+    // Hide all nav elements first
+    document.getElementById('student-nav').classList.add('hidden');
+    document.getElementById('admin-nav').classList.add('hidden');
+    document.getElementById('employee-nav').classList.add('hidden');
+
     if (currentUser.role === 'admin') {
-        document.getElementById('student-nav').classList.add('hidden');
         document.getElementById('admin-nav').classList.remove('hidden');
         navLinks.forEach(l => l.classList.remove('active'));
         document.getElementById('nav-adm-dashboard')?.classList.add('active');
         switchSection('admin-dashboard');
+    } else if (currentUser.role === 'employee') {
+        document.getElementById('employee-nav').classList.remove('hidden');
+        navLinks.forEach(l => l.classList.remove('active'));
+        document.getElementById('nav-emp-dashboard')?.classList.add('active');
+        switchSection('employee-dashboard');
     } else {
-        document.getElementById('admin-nav').classList.add('hidden');
         document.getElementById('student-nav').classList.remove('hidden');
         navLinks.forEach(l => l.classList.remove('active'));
         document.getElementById('nav-stu-dashboard')?.classList.add('active');
@@ -613,6 +627,8 @@ function switchSection(id) {
     
     if (id === 'manage-users') {
         fetchAdminUsers();
+    } else if (id === 'manage-employees') {
+        fetchAdminEmployees();
     }
 }
 
@@ -689,6 +705,8 @@ function applyFiltersAndRender() {
 
     if (currentUser && currentUser.role === 'admin') {
         renderAdminView(filtered);
+    } else if (currentUser && currentUser.role === 'employee') {
+        renderEmployeeView(filtered);
     } else {
         renderStudentView(filtered);
     }
@@ -815,14 +833,73 @@ window.viewComplaint = async (id) => {
                 <div class="resolution-text">"${c.admin_reply}"</div>
             </div>
         ` : ''}
+
+        ${currentUser && currentUser.role === 'employee' ? `
+            <div class="modal-management-actions-form mt-2" style="border-top: 1px dashed var(--border); padding-top: 1.5rem;">
+                <h3 class="form-section-title"><i class="fa-solid fa-square-poll-horizontal"></i> Update Task Status</h3>
+                
+                <div class="form-group-modern">
+                    <label for="worker-update-status"><i class="fa-solid fa-signal"></i> Set Status</label>
+                    <div class="select-wrapper-modern">
+                        <select id="worker-update-status" style="width: 100%; height: 42px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.95rem; background: var(--bg-input); color: var(--text-main); padding: 0 1rem;">
+                            <option value="In Progress" ${c.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Resolved" ${c.status === 'Resolved' ? 'selected' : ''}>Mark Resolved</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group-modern mt-1">
+                    <label for="worker-update-reply"><i class="fa-solid fa-reply-all"></i> Resolution / Progress Notes</label>
+                    <div class="textarea-wrapper-modern">
+                        <textarea id="worker-update-reply" placeholder="Type notes explaining progress or resolution. This will notify administrators to review..." rows="3" style="width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.95rem; background: var(--bg-input); color: var(--text-main); padding: 0.75rem 1rem; box-sizing: border-box;">${c.worker_notes || ''}</textarea>
+                    </div>
+                </div>
+
+                <div class="form-group-modern mt-1" id="worker-evidence-group">
+                    <label class="assign-field-label" style="font-weight: 800; font-size: 0.82rem; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                        <i class="fa-solid fa-camera"></i> Proof of Work Evidence <span id="evidence-required-badge" style="color: var(--danger); font-weight: 800; display: ${c.status === 'Resolved' ? 'inline-block' : 'none'};">* (Required)</span>
+                    </label>
+                    <input type="file" id="worker-evidence-file" accept="image/*" style="display: none;" onchange="handleWorkerEvidenceUpload(this)">
+                    <div class="file-upload-zone" id="worker-evidence-dropzone" onclick="document.getElementById('worker-evidence-file').click()" style="cursor: pointer; border: 2.5px dashed var(--border); border-radius: var(--radius-md); padding: 1.5rem; text-align: center; background: var(--bg-input); transition: all 0.2s ease; margin-top: 6px;">
+                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.8rem; color: var(--primary); margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;"></i>
+                        <span id="worker-evidence-filename" style="margin: 0; font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">
+                            Click to upload proof of work image
+                        </span>
+                    </div>
+                    <input type="hidden" id="worker-evidence-base64" value="">
+                </div>
+            </div>
+        ` : ''}
     `;
 
-    modalActions.innerHTML = `
-        <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">
-            Close Window
-        </button>
-    `;
+    if (currentUser && currentUser.role === 'employee') {
+        modalActions.innerHTML = `
+            <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">Discard</button>
+            <button class="btn btn-primary" onclick="submitWorkerUpdate('${c.id}')"><i class="fa-solid fa-circle-check"></i> Submit Resolution</button>
+        `;
+    } else {
+        modalActions.innerHTML = `
+            <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">
+                Close Window
+            </button>
+        `;
+    }
     modal.classList.add('active');
+
+    // Attach dynamic validation badge listener
+    if (currentUser && currentUser.role === 'employee') {
+        const statusSelect = document.getElementById('worker-update-status');
+        const reqBadge = document.getElementById('evidence-required-badge');
+        if (statusSelect && reqBadge) {
+            statusSelect.addEventListener('change', () => {
+                if (statusSelect.value === 'Resolved') {
+                    reqBadge.style.display = 'inline-block';
+                } else {
+                    reqBadge.style.display = 'none';
+                }
+            });
+        }
+    }
 };
 
 window.manageComplaint = async (id) => {
@@ -934,8 +1011,145 @@ window.manageComplaint = async (id) => {
             </div>`;
         })() : ''}
         
+        ${c.worker_notes || c.worker_evidence ? `
+            <div class="modal-resolution-card" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.15); margin-bottom: 1.5rem; border-radius: 16px; padding: 1.25rem 1.5rem; position: relative;">
+                <div class="resolution-card-decor" style="color: var(--primary);"><i class="fa-solid fa-clipboard-check"></i></div>
+                <label class="resolution-label" style="color: var(--primary); font-weight: 800; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px; margin-bottom: 0.5rem;">
+                    <i class="fa-solid fa-user-check"></i> Worker Resolution Evidence
+                </label>
+                ${c.worker_notes ? `<div class="resolution-text" style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.75rem; font-style: italic;">"${c.worker_notes}"</div>` : ''}
+                ${c.worker_evidence ? (() => {
+                    const wEvidenceSrc = c.worker_evidence.startsWith('data:') ? c.worker_evidence : `/uploads/${c.worker_evidence}`;
+                    return `
+                    <div class="detail-group" style="margin-top: 0.75rem;">
+                        <label class="modal-section-label" style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">Proof of Work Uploaded by ${c.assigned_to_name || 'Worker'}:</label>
+                        <div class="evidence-gallery-card" style="margin-top: 4px;">
+                            <div class="evidence-thumbnail-wrapper" onclick="openLightbox('${wEvidenceSrc}')" style="max-width: 250px; border-radius: var(--radius-sm); overflow: hidden; border: 1.5px solid var(--border); cursor: zoom-in; position: relative;">
+                                <img src="${wEvidenceSrc}" alt="Worker Proof of Work" class="evidence-thumbnail-img" style="width: 100%; height: auto; display: block;" onerror="handleImageError(this)">
+                                <div class="evidence-overlay-hover">
+                                    <i class="fa-solid fa-magnifying-glass-plus"></i>
+                                    <span>View Proof</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                })() : ''}
+            </div>
+        ` : ''}
+        
+        <!-- Assignment Info Card (shown when complaint has an assigned employee) -->
+        ${c.assigned_to ? (() => {
+            const empId = `EMP-${String(c.assigned_to).padStart(3, '0')}`;
+            const deadlineDate = c.resolution_deadline ? new Date(c.resolution_deadline) : null;
+            const now = new Date();
+            const isOverdue = deadlineDate && deadlineDate < now;
+            const remainingMs = deadlineDate ? (deadlineDate - now) : null;
+
+            const formatDeadline = (d) => d.toLocaleString('en-IN', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: true
+            });
+
+            // Countdown timer accent color
+            let timerAccent = '#10b981'; // green
+            if (remainingMs !== null) {
+                const hoursLeft = remainingMs / 3600000;
+                if (isOverdue) timerAccent = '#ef4444';
+                else if (hoursLeft < 6) timerAccent = '#ef4444';
+                else if (hoursLeft < 24) timerAccent = '#f59e0b';
+            }
+
+            return `
+            <div class="assignment-info-card" id="assignment-card-${c.id}" style="
+                background: linear-gradient(135deg, rgba(79,70,229,0.06) 0%, rgba(139,92,246,0.04) 100%);
+                border: 1px solid rgba(99,102,241,0.2);
+                border-radius: 20px;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+                position: relative;
+                overflow: hidden;
+            ">
+                <!-- Background watermark icon -->
+                <div style="position:absolute;bottom:-20px;right:10px;font-size:6rem;opacity:0.04;color:var(--primary);pointer-events:none;">
+                    <i class="fa-solid fa-user-tie"></i>
+                </div>
+
+                <!-- Section header -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;">
+                    <div style="background:rgba(99,102,241,0.12);border-radius:10px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid rgba(99,102,241,0.2);">
+                        <i class="fa-solid fa-user-check" style="color:var(--primary);font-size:0.9rem;"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:0.7rem;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:var(--primary);line-height:1;">Task Assignment</div>
+                        <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;">Worker assigned to this complaint</div>
+                    </div>
+                    <span style="margin-left:auto;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.2);color:var(--primary);padding:4px 12px;border-radius:100px;font-size:0.7rem;font-weight:800;text-transform:uppercase;">${empId}</span>
+                </div>
+
+                <!-- Worker info row -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:${deadlineDate ? '1.25rem' : '0'};">
+                    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1rem;">
+                        <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:6px;">
+                            <i class="fa-solid fa-user" style="margin-right:5px;"></i>Assigned Worker
+                        </div>
+                        <div style="font-size:1rem;font-weight:800;color:var(--text-main);">${c.assigned_to_name}</div>
+                        <div style="font-size:0.8rem;color:var(--primary);font-weight:700;margin-top:3px;">${empId}</div>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1rem;">
+                        <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:6px;">
+                            <i class="fa-solid fa-calendar-check" style="margin-right:5px;"></i>Resolution Deadline
+                        </div>
+                        ${deadlineDate ? `
+                        <div style="font-size:0.88rem;font-weight:700;color:${isOverdue ? '#ef4444' : 'var(--text-main)'};">${formatDeadline(deadlineDate)}</div>
+                        ` : `<div style="font-size:0.88rem;color:var(--text-muted);font-style:italic;">No deadline set</div>`}
+                    </div>
+                </div>
+
+                ${deadlineDate ? (() => {
+                    const isCompleted = ['Resolved', 'Under Review'].includes(c.status);
+                    if (isCompleted) {
+                        return `
+                <!-- Task Completed — timer stopped -->
+                <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:14px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
+                    <div style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fa-solid fa-circle-check" style="color:#10b981;font-size:1rem;"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:4px;">Timer Status</div>
+                        <div style="font-size:1rem;font-weight:900;color:#10b981;font-family:'Outfit',monospace;">Task Completed — Timer Stopped</div>
+                    </div>
+                    <span style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#10b981;padding:5px 14px;border-radius:100px;font-size:0.7rem;font-weight:900;text-transform:uppercase;flex-shrink:0;">
+                        ${c.status === 'Under Review' ? 'Under Review' : 'Resolved'}
+                    </span>
+                </div>`;
+                    }
+                    return `
+                <!-- Live Countdown Timer -->
+                <div style="background:${isOverdue ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isOverdue ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.07)'};border-radius:14px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
+                    <div style="background:${timerAccent}18;border:1px solid ${timerAccent}30;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                        <i class="fa-solid fa-${isOverdue ? 'triangle-exclamation' : 'hourglass-half'}" style="color:${timerAccent};font-size:1rem;"></i>
+                    </div>
+                    <div style="flex:1;">
+                        <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:4px;">
+                            ${isOverdue ? 'Deadline Status' : 'Time Remaining'}
+                        </div>
+                        <div id="countdown-timer-${c.id}" style="font-size:1.1rem;font-weight:900;color:${timerAccent};font-family:'Outfit',monospace;letter-spacing:0.02em;">
+                            ${isOverdue ? '⚠ OVERDUE' : 'Calculating...'}
+                        </div>
+                    </div>
+                    ${isOverdue ? `
+                    <span style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;padding:5px 14px;border-radius:100px;font-size:0.7rem;font-weight:900;text-transform:uppercase;flex-shrink:0;">
+                        Admin Alerted
+                    </span>
+                    ` : ''}
+                </div>`;
+                })() : ''}
+            </div>`;
+        })() : ''}
+
         <!-- Management Actions Form -->
         <div class="modal-management-actions-form">
+
             <h3 class="form-section-title"><i class="fa-solid fa-square-poll-horizontal"></i> Resolution & Status Update</h3>
             
             <div class="actions-grid-modern">
@@ -945,6 +1159,7 @@ window.manageComplaint = async (id) => {
                         <select id="update-status">
                             <option value="Pending" ${c.status === 'Pending' ? 'selected' : ''}>Pending Approval</option>
                             <option value="In Progress" ${c.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                            <option value="Under Review" ${c.status === 'Under Review' ? 'selected' : ''}>Under Review</option>
                             <option value="Resolved" ${c.status === 'Resolved' ? 'selected' : ''}>Mark Resolved</option>
                         </select>
                         <i class="fa-solid fa-chevron-down select-chevron"></i>
@@ -971,6 +1186,7 @@ window.manageComplaint = async (id) => {
                 </div>
             </div>
         </div>
+
     `;
 
     modalActions.innerHTML = `
@@ -979,7 +1195,740 @@ window.manageComplaint = async (id) => {
         <button class="btn btn-primary btn-save-resolution" onclick="submitAdminUpdate('${id}')"><i class="fa-solid fa-check-circle"></i> Save & Notify Student</button>
     `;
     modal.classList.add('active');
+
+    // --- Live Countdown Timer (only for active/in-progress complaints) ---
+    const isCompleted = ['Resolved', 'Under Review'].includes(c.status);
+    if (c.assigned_to && c.resolution_deadline && !isCompleted) {
+        const timerId = `countdown-timer-${c.id}`;
+        const deadline = new Date(c.resolution_deadline);
+        let overdueAlertSent = false;
+
+        // Clear any previous timer
+        if (window._countdownInterval) clearInterval(window._countdownInterval);
+
+        const tick = () => {
+            const el = document.getElementById(timerId);
+            if (!el) { clearInterval(window._countdownInterval); return; }
+
+            const now = new Date();
+            const diff = deadline - now;
+
+            if (diff <= 0) {
+                // Overdue
+                el.textContent = '⚠ OVERDUE — Deadline Passed';
+                el.style.color = '#ef4444';
+                // Send one-time overdue notification
+                if (!overdueAlertSent) {
+                    overdueAlertSent = true;
+                    fetch(`${API_BASE}/complaints/overdue-notify`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ complaintId: c.id })
+                    }).then(r => r.json()).then(res => {
+                        if (res.success) console.log('[SCMS] Overdue alert sent to admins.');
+                    }).catch(err => console.error('[SCMS] Overdue notify failed:', err));
+                }
+                clearInterval(window._countdownInterval);
+                return;
+            }
+
+            const days    = Math.floor(diff / 86400000);
+            const hours   = Math.floor((diff % 86400000) / 3600000);
+            const minutes = Math.floor((diff % 3600000) / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+
+            let display = '';
+            if (days > 0)    display += `${days}d `;
+            if (hours > 0)   display += `${hours}h `;
+            display += `${String(minutes).padStart(2,'0')}m ${String(seconds).padStart(2,'0')}s`;
+
+            el.textContent = display;
+
+            // Dynamic color: green → amber → red
+            const hoursTotal = diff / 3600000;
+            if (hoursTotal < 1)       el.style.color = '#ef4444';
+            else if (hoursTotal < 24) el.style.color = '#f59e0b';
+            else                      el.style.color = '#10b981';
+        };
+
+        tick(); // run immediately
+        window._countdownInterval = setInterval(tick, 1000);
+    }
+
 };
+
+window.openAssignModal = async (id) => {
+    let c = allComplaints.find(item => item.id === id);
+    if (!c) return;
+
+    // --- Case 1: Complaint is already Resolved / Under Review ---
+    if (['Resolved', 'Under Review'].includes(c.status)) {
+        document.getElementById('modal-title').innerHTML = `
+            <span style="color: #10b981; font-weight: 800; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-circle-check"></i> Complaint ${c.status}
+            </span>
+        `;
+        modalContent.innerHTML = `
+            <div style="text-align:center;padding:2rem 1rem;">
+                <div style="width:80px;height:80px;border-radius:50%;background:rgba(16,185,129,0.12);border:2px solid rgba(16,185,129,0.3);display:inline-flex;align-items:center;justify-content:center;margin-bottom:1.25rem;">
+                    <i class="fa-solid fa-circle-check" style="font-size:2.5rem;color:#10b981;"></i>
+                </div>
+                <h3 style="font-family:'Outfit',sans-serif;font-size:1.4rem;font-weight:900;color:var(--text-main);margin:0 0 0.5rem 0;">
+                    Complaint ${c.status === 'Under Review' ? 'Under Review' : 'Resolved Successfully'} ✅
+                </h3>
+                <p style="color:var(--text-muted);font-size:0.95rem;line-height:1.6;margin:0 0 1.5rem 0;">
+                    ${c.status === 'Under Review'
+                        ? 'The assigned employee has submitted their proof of work. Please review it from the Manage Complaint panel.'
+                        : 'This complaint has been fully resolved. No further assignment is needed.'}
+                </p>
+                <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:14px;padding:1rem 1.25rem;text-align:left;display:flex;align-items:center;gap:12px;">
+                    <i class="fa-solid fa-tag" style="color:#10b981;font-size:1.1rem;"></i>
+                    <div>
+                        <div style="font-size:0.72rem;font-weight:800;text-transform:uppercase;color:#10b981;letter-spacing:0.06em;">Subject</div>
+                        <div style="font-size:0.95rem;font-weight:700;color:var(--text-main);margin-top:2px;">${c.title}</div>
+                    </div>
+                    <span style="margin-left:auto;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#10b981;padding:5px 14px;border-radius:100px;font-size:0.72rem;font-weight:900;text-transform:uppercase;">${c.status}</span>
+                </div>
+            </div>
+        `;
+        modalActions.innerHTML = `
+            <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">Close</button>
+        `;
+        document.getElementById('modal-overlay').classList.add('active');
+        return;
+    }
+
+    document.getElementById('modal-title').innerHTML = `
+        <span style="color: var(--primary); font-weight: 800; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-user-check"></i> Assign Task
+        </span>
+    `;
+
+    // Build "Already Assigned" banner if employee is assigned
+    const alreadyAssignedBanner = c.assigned_to ? (() => {
+        const empId = `EMP-${String(c.assigned_to).padStart(3, '0')}`;
+        const deadlineStr = c.resolution_deadline
+            ? new Date(c.resolution_deadline).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })
+            : 'No deadline set';
+        return `
+        <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:16px;padding:1rem 1.25rem;margin-bottom:1.5rem;display:flex;align-items:center;gap:12px;">
+            <div style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);border-radius:10px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fa-solid fa-user-tie" style="color:#f59e0b;font-size:1rem;"></i>
+            </div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:#f59e0b;margin-bottom:3px;">Already Assigned</div>
+                <div style="font-size:0.95rem;font-weight:800;color:var(--text-main);">${c.assigned_to_name} <span style="color:var(--primary);font-size:0.8rem;">(${empId})</span></div>
+                <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px;"><i class="fa-regular fa-clock" style="margin-right:4px;"></i>${deadlineStr}</div>
+            </div>
+            <span style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);color:#f59e0b;padding:4px 12px;border-radius:100px;font-size:0.7rem;font-weight:900;text-transform:uppercase;flex-shrink:0;">Reassign?</span>
+        </div>`;
+    })() : '';
+
+
+
+    modalContent.innerHTML = `
+        <style>
+            #modal-overlay.active .modal-card {
+                max-width: 500px !important;
+                border-radius: 24px;
+                box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
+                overflow: visible !important;
+            }
+            #modal-overlay.active .modal-body {
+                overflow: visible !important;
+                padding: 2rem;
+            }
+            .assign-header-card {
+                background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%);
+                border: 1px solid rgba(79, 70, 229, 0.12);
+                border-left: 4px solid var(--primary);
+                border-radius: 16px;
+                padding: 1.25rem 1.5rem;
+                position: relative;
+                overflow: hidden;
+                margin-bottom: 1.5rem;
+            }
+            .assign-header-glow {
+                position: absolute;
+                top: -50px;
+                right: -50px;
+                width: 150px;
+                height: 150px;
+                background: radial-gradient(circle, rgba(99,102,241,0.08) 0%, rgba(99,102,241,0) 70%);
+                pointer-events: none;
+            }
+            .assign-header-icon-watermark {
+                position: absolute;
+                bottom: -15px;
+                right: 15px;
+                font-size: 4.5rem;
+                color: var(--primary);
+                opacity: 0.04;
+                pointer-events: none;
+            }
+            .assign-badge {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                padding: 5px 12px;
+                background: rgba(99, 102, 241, 0.08);
+                border: 1px solid rgba(99, 102, 241, 0.16);
+                border-radius: 100px;
+                font-size: 0.75rem;
+                font-weight: 800;
+                color: var(--primary);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 0.5rem;
+            }
+            .assign-title {
+                font-family: 'Outfit', sans-serif;
+                font-size: 1.2rem;
+                font-weight: 800;
+                color: var(--text-main);
+                margin: 0 0 0.4rem 0;
+                letter-spacing: -0.01em;
+                line-height: 1.3;
+            }
+            .assign-desc {
+                font-size: 0.85rem;
+                color: var(--text-muted);
+                line-height: 1.4;
+                margin: 0;
+            }
+            .assign-form-container {
+                display: flex;
+                flex-direction: column;
+                gap: 1.5rem;
+            }
+            .assign-field-group {
+                display: flex;
+                flex-direction: column;
+                position: relative;
+            }
+            .assign-field-group:first-of-type {
+                z-index: 10; /* Ensure dropdown displays above datepicker container */
+            }
+            .assign-field-group:last-of-type {
+                z-index: 1;
+            }
+            .assign-field-label {
+                font-size: 0.8rem;
+                font-weight: 800;
+                color: var(--text-muted);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 8px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+            .assign-input-wrapper {
+                position: relative;
+                width: 100%;
+            }
+            .assign-input-icon {
+                position: absolute;
+                left: 16px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--primary);
+                font-size: 1.05rem;
+                opacity: 0.85;
+                pointer-events: none;
+                transition: var(--transition);
+                z-index: 5;
+            }
+            
+            /* Custom Modern Autocomplete Dropdown Styles */
+            .custom-select-container {
+                position: relative;
+                width: 100%;
+            }
+            .custom-select-trigger {
+                width: 100%;
+                height: 48px;
+                background: var(--bg-input);
+                border: 1.5px solid var(--border);
+                border-radius: 12px;
+                padding: 0 16px 0 44px;
+                font-size: 0.95rem;
+                font-weight: 600;
+                color: var(--text-main);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                box-sizing: border-box;
+            }
+            .custom-select-trigger:hover {
+                border-color: var(--primary);
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.05);
+            }
+            .custom-select-trigger.active {
+                border-color: var(--primary);
+                box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+            }
+            .custom-select-arrow {
+                color: var(--text-muted);
+                font-size: 0.8rem;
+                transition: transform 0.2s ease;
+            }
+            .custom-select-trigger.active .custom-select-arrow {
+                transform: rotate(180deg);
+                color: var(--primary);
+            }
+            .custom-select-options-list {
+                position: absolute;
+                top: calc(100% + 6px);
+                left: 0;
+                width: 100%;
+                background: var(--bg-input); /* Solid background to prevent overlap translucency */
+                border: 1.5px solid var(--primary);
+                border-radius: 14px;
+                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+                z-index: 1200; /* Ensure it stays completely on top of all other page inputs */
+                box-sizing: border-box;
+                padding: 8px;
+                display: flex;
+                flex-direction: column;
+                animation: dropdownFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            @keyframes dropdownFadeIn {
+                from { opacity: 0; transform: translateY(-8px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .custom-select-search-wrapper {
+                padding: 4px;
+                border-bottom: 1px solid var(--border);
+                margin-bottom: 6px;
+                background: var(--bg-input);
+            }
+            .custom-select-search-input {
+                width: 100%;
+                height: 36px;
+                border: 1px solid var(--border);
+                border-radius: 8px;
+                padding: 0 12px 0 34px;
+                font-size: 0.85rem;
+                background: var(--bg-app);
+                color: var(--text-main);
+                font-family: inherit;
+                outline: none;
+                box-sizing: border-box;
+                transition: border-color 0.2s;
+            }
+            .custom-select-search-input:focus {
+                border-color: var(--primary);
+            }
+            .custom-select-items-holder {
+                max-height: 180px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 4px;
+            }
+            .custom-select-items-holder::-webkit-scrollbar {
+                width: 5px;
+            }
+            .custom-select-items-holder::-webkit-scrollbar-thumb {
+                background: var(--border);
+                border-radius: 10px;
+            }
+            .custom-select-option {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 8px 10px;
+                border-radius: 8px;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                box-sizing: border-box;
+            }
+            .custom-select-option:hover {
+                background: rgba(99, 102, 241, 0.06);
+                transform: translateX(4px);
+            }
+            .custom-select-option.selected {
+                background: rgba(99, 102, 241, 0.1);
+                color: var(--primary);
+                font-weight: 700;
+            }
+            .option-avatar {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+                color: white;
+                font-weight: 700;
+                font-size: 0.8rem;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
+                flex-shrink: 0;
+            }
+            .option-info {
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+                flex: 1;
+                text-align: left;
+                min-width: 0;
+            }
+            .option-name {
+                font-size: 0.88rem;
+                font-weight: 700;
+                color: var(--text-main);
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+            .option-id {
+                font-size: 0.74rem;
+                color: var(--text-muted);
+                font-weight: 600;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+            }
+
+            /* Date Picker custom input */
+            .assign-date {
+                width: 100%;
+                height: 48px;
+                background: var(--bg-input);
+                border: 1.5px solid var(--border);
+                border-radius: 12px;
+                padding: 0 16px 0 44px;
+                font-size: 0.95rem;
+                font-weight: 600;
+                color: var(--text-main);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.01);
+                transition: all 0.2s ease;
+                outline: none;
+                box-sizing: border-box;
+                font-family: inherit;
+            }
+            .assign-date:focus {
+                border-color: var(--primary);
+                box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12);
+            }
+            .assign-date::-webkit-calendar-picker-indicator {
+                background: transparent;
+                bottom: 0;
+                color: transparent;
+                cursor: pointer;
+                height: auto;
+                left: 0;
+                position: absolute;
+                right: 0;
+                top: 0;
+                width: auto;
+                z-index: 2;
+            }
+            .assign-date-arrow {
+                position: absolute;
+                right: 16px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: var(--text-muted);
+                font-size: 0.95rem;
+                pointer-events: none;
+                z-index: 1;
+            }
+            .assign-btn-cancel {
+                background: transparent;
+                border: 1.5px solid var(--border);
+                color: var(--text-muted);
+                font-weight: 700;
+                border-radius: 12px;
+                height: 46px;
+                padding: 0 1.5rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                font-size: 0.95rem;
+                font-family: inherit;
+            }
+            .assign-btn-cancel:hover {
+                background: rgba(100, 116, 139, 0.05);
+                color: var(--text-main);
+                border-color: var(--text-muted);
+            }
+            .assign-btn-submit {
+                background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+                color: white;
+                font-weight: 700;
+                border-radius: 12px;
+                height: 46px;
+                padding: 0 1.75rem;
+                border: none;
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                box-shadow: 0 4px 14px rgba(99, 102, 241, 0.3);
+                transition: all 0.2s ease;
+                font-size: 0.95rem;
+                font-family: inherit;
+            }
+            .assign-btn-submit:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 6px 18px rgba(99, 102, 241, 0.4);
+                filter: brightness(1.03);
+            }
+            .assign-btn-submit:active {
+                transform: translateY(0);
+            }
+        </style>
+
+        <div class="assign-header-card">
+            <div class="assign-header-glow"></div>
+            <div class="assign-header-icon-watermark"><i class="fa-solid fa-clipboard-list"></i></div>
+            <span class="assign-badge"><i class="fa-solid fa-layer-group"></i> ${c.category}</span>
+            <h2 class="assign-title">${c.title}</h2>
+            <p class="assign-desc">${c.assigned_to ? 'Update the assigned employee or change the resolution deadline.' : 'Assign this complaint task to a verified employee and establish a resolution time limit.'}</p>
+        </div>
+
+        ${alreadyAssignedBanner}
+
+        <div class="assign-form-container">
+            <div class="assign-field-group">
+                <label class="assign-field-label">
+                    <i class="fa-solid fa-user-tie"></i> Select Employee *
+                </label>
+                <div class="custom-select-container">
+                    <div class="custom-select-trigger" id="custom-employee-select-trigger">
+                        <span id="custom-employee-select-value">-- Choose Employee --</span>
+                        <i class="fa-solid fa-chevron-down custom-select-arrow"></i>
+                    </div>
+                    <i class="fa-solid fa-user-check assign-input-icon"></i>
+                    <div class="custom-select-options-list hidden" id="custom-employee-options-list">
+                        <div class="custom-select-search-wrapper" onclick="event.stopPropagation();">
+                            <div style="position: relative; width: 100%;">
+                                <input type="text" id="custom-employee-search" class="custom-select-search-input" placeholder="Search employee name, ID or email...">
+                                <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 0.8rem; color: var(--text-muted); opacity: 0.7;"></i>
+                            </div>
+                        </div>
+                        <div id="custom-employee-items-holder" class="custom-select-items-holder">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                    <input type="hidden" id="assign-modal-employee-select" value="">
+                </div>
+            </div>
+            
+            <div class="assign-field-group">
+                <label for="assign-modal-deadline" class="assign-field-label">
+                    <i class="fa-regular fa-clock"></i> Resolution Deadline Limit
+                </label>
+                <div class="assign-input-wrapper">
+                    <input type="datetime-local" id="assign-modal-deadline" class="assign-date">
+                    <i class="fa-regular fa-calendar-days assign-input-icon"></i>
+                    <i class="fa-regular fa-calendar assign-date-arrow"></i>
+                </div>
+            </div>
+        </div>
+    `;
+
+    modalActions.innerHTML = `
+        <button class="assign-btn-cancel" onclick="document.getElementById('modal-overlay').classList.remove('active')">Cancel</button>
+        <button class="assign-btn-submit" onclick="submitModalAssignment('${id}')">
+            <i class="fa-solid fa-user-plus"></i> Assign Task
+        </button>
+    `;
+
+    // Populate custom dropdown with employees
+    try {
+        const res = await fetch(`${API_BASE}/admin/employees`);
+        const employees = await res.json();
+        
+        const trigger = document.getElementById('custom-employee-select-trigger');
+        const list = document.getElementById('custom-employee-options-list');
+        const itemsHolder = document.getElementById('custom-employee-items-holder');
+        const valueSpan = document.getElementById('custom-employee-select-value');
+        const hiddenInput = document.getElementById('assign-modal-employee-select');
+        const searchInput = document.getElementById('custom-employee-search');
+        
+        if (trigger && list && itemsHolder && valueSpan && hiddenInput) {
+            const openDropdown = () => {
+                trigger.classList.add('active');
+                list.classList.remove('hidden');
+                if (searchInput) {
+                    searchInput.value = '';
+                    // Reset filter on open
+                    const items = itemsHolder.querySelectorAll('.custom-select-option');
+                    items.forEach(item => item.style.display = 'flex');
+                    setTimeout(() => searchInput.focus(), 60);
+                }
+            };
+            
+            const closeDropdown = () => {
+                trigger.classList.remove('active');
+                list.classList.add('hidden');
+            };
+
+            // Setup trigger click event
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (list.classList.contains('hidden')) {
+                    openDropdown();
+                } else {
+                    closeDropdown();
+                }
+            });
+            
+            // Document click to close dropdown when clicking outside
+            const clickOutsideHandler = (e) => {
+                if (!trigger.contains(e.target) && !list.contains(e.target)) {
+                    closeDropdown();
+                }
+            };
+            document.addEventListener('click', clickOutsideHandler);
+            
+            // Cleanup event listener when modal is closed
+            const closeBtn = document.getElementById('close-modal');
+            const cancelBtn = document.querySelector('.assign-btn-cancel');
+            [closeBtn, cancelBtn].forEach(btn => {
+                btn?.addEventListener('click', () => {
+                    document.removeEventListener('click', clickOutsideHandler);
+                });
+            });
+
+            itemsHolder.innerHTML = '';
+            
+            // Default "Choose Employee" option
+            const defaultOpt = document.createElement('div');
+            defaultOpt.className = 'custom-select-option choose-default-opt';
+            defaultOpt.innerHTML = `
+                <div class="option-avatar" style="background: rgba(100,116,139,0.1); color: var(--text-muted); box-shadow: none;">👤</div>
+                <div class="option-info">
+                    <div class="option-name">-- Choose Employee --</div>
+                </div>
+            `;
+            defaultOpt.addEventListener('click', (e) => {
+                e.stopPropagation();
+                valueSpan.textContent = '-- Choose Employee --';
+                hiddenInput.value = '';
+                hiddenInput.dataset.name = '';
+                itemsHolder.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+                defaultOpt.classList.add('selected');
+                closeDropdown();
+            });
+            itemsHolder.appendChild(defaultOpt);
+
+            employees.forEach(emp => {
+                const empIdStr = `EMP-${emp.id.toString().padStart(3, '0')}`;
+                const initials = emp.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+                
+                const opt = document.createElement('div');
+                opt.className = 'custom-select-option';
+                if (emp.id === c.assigned_to) {
+                    opt.classList.add('selected');
+                    valueSpan.textContent = `${emp.name} (${empIdStr})`;
+                    hiddenInput.value = emp.id;
+                    hiddenInput.dataset.name = emp.name;
+                }
+                opt.innerHTML = `
+                    <div class="option-avatar">${initials}</div>
+                    <div class="option-info">
+                        <div class="option-name">${emp.name}</div>
+                        <div class="option-id">${empIdStr} &bull; ${emp.email}</div>
+                    </div>
+                `;
+                opt.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    valueSpan.textContent = `${emp.name} (${empIdStr})`;
+                    hiddenInput.value = emp.id;
+                    hiddenInput.dataset.name = emp.name;
+                    itemsHolder.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
+                    opt.classList.add('selected');
+                    closeDropdown();
+                });
+                itemsHolder.appendChild(opt);
+            });
+
+            // Search implementation
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase().trim();
+                    const items = itemsHolder.querySelectorAll('.custom-select-option');
+                    items.forEach(item => {
+                        const name = item.querySelector('.option-name')?.textContent.toLowerCase() || '';
+                        const id = item.querySelector('.option-id')?.textContent.toLowerCase() || '';
+                        if (name.includes(term) || id.includes(term) || item.classList.contains('choose-default-opt') || term === '') {
+                            item.style.display = 'flex';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+                });
+            }
+        }
+    } catch (err) {
+        console.error("Failed to populate employee dropdown:", err);
+    }
+
+    if (c.resolution_deadline) {
+        try {
+            // ISO format formatting for datetime-local (YYYY-MM-DDTHH:MM)
+            const d = new Date(c.resolution_deadline.replace(' ', 'T'));
+            const offset = d.getTimezoneOffset();
+            const localDate = new Date(d.getTime() - (offset * 60 * 1000));
+            const iso = localDate.toISOString().slice(0, 16);
+            document.getElementById('assign-modal-deadline').value = iso;
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    modal.classList.add('active');
+};
+
+async function submitModalAssignment(complaintId) {
+    const select = document.getElementById('assign-modal-employee-select');
+    const deadlineInput = document.getElementById('assign-modal-deadline');
+    if (!select) return;
+    
+    const employeeId = select.value;
+    const employeeName = select.dataset.name || '';
+    const deadline = deadlineInput ? deadlineInput.value : '';
+    
+    if (!employeeId) {
+        showToast('Please select an employee to assign', 'warning');
+        return;
+    }
+    
+    const loadingToast = showToast('Assigning task & notifying employee...', 'info', 0);
+    try {
+        const res = await fetch(`${API_BASE}/complaints/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ complaintId, employeeId, employeeName, deadline })
+        });
+        const data = await res.json();
+        
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
+        
+        if (data.success) {
+            showToast('Employee assigned and notified successfully!', 'success');
+            document.getElementById('modal-overlay').classList.remove('active');
+            refreshData();
+        } else {
+            showToast(data.message || 'Assignment failed', 'danger');
+        }
+    } catch (err) {
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
+        showToast('Connection error', 'danger');
+    }
+}
+
+window.openAssignModal = openAssignModal;
+window.submitModalAssignment = submitModalAssignment;
 
 async function submitAdminUpdate(id) {
     const status = document.getElementById('update-status').value;
@@ -1100,6 +2049,11 @@ function renderAdminView(complaints) {
                         </span>
                     </td>
                     <td class="nowrap"><span class="status-badge status-${statusClass}">${c.status}</span></td>
+                    <td class="nowrap">
+                        <button class="btn" onclick="openAssignModal('${c.id}')" style="padding: 0.4rem 1rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #3b82f6; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.3s ease; box-sizing: border-box; height: 32px; font-weight: 700;">
+                            Assign <i class="fa-solid fa-user-check"></i>
+                        </button>
+                    </td>
                 </tr>
             `;
         });
@@ -1124,7 +2078,14 @@ function renderAdminView(complaints) {
                     </span>
                 </td>
                 <td class="nowrap"><span class="status-badge status-${statusClass}">${c.status}</span></td>
-                <td class="nowrap"><button class="btn btn-primary" onclick="manageComplaint('${c.id}')" style="padding: 0.45rem 1.25rem; font-size: 0.8rem;">Review <i class="fa-solid fa-sliders"></i></button></td>
+                <td class="nowrap" style="display: flex; gap: 0.5rem; align-items: center;">
+                    <button class="btn btn-primary" onclick="manageComplaint('${c.id}')" style="padding: 0.45rem 1.25rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; box-sizing: border-box; height: 36px;">
+                        Review <i class="fa-solid fa-sliders"></i>
+                    </button>
+                    <button class="btn" onclick="openAssignModal('${c.id}')" style="padding: 0.45rem 1.25rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; background: rgba(59, 130, 246, 0.1); border: 1px solid rgba(59, 130, 246, 0.25); color: #3b82f6; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.3s ease; box-sizing: border-box; height: 36px; font-weight: 700;">
+                        Assign <i class="fa-solid fa-user-check"></i>
+                    </button>
+                </td>
             </tr>
         `;
     });
@@ -1319,6 +2280,121 @@ document.addEventListener('DOMContentLoaded', () => {
             submitBtn.innerHTML = originalHtml;
         }
     });
+
+    document.getElementById('adm-search-employees')?.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        if (!query) {
+            renderEmployeesList(allEmployees);
+            return;
+        }
+        const filtered = allEmployees.filter(emp => 
+            emp.name.toLowerCase().includes(query) || 
+            emp.email.toLowerCase().includes(query)
+        );
+        renderEmployeesList(filtered);
+    });
+
+    document.getElementById('emp-send-otp-btn')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('emp-reg-name').value.trim();
+        const email = document.getElementById('emp-reg-email').value.trim();
+        const password = document.getElementById('emp-reg-password').value.trim();
+        
+        if (!name || !email || !password) {
+            showToast('All fields are required to send OTP code', 'warning');
+            return;
+        }
+        
+        const sendBtn = document.getElementById('emp-send-otp-btn');
+        const originalText = sendBtn.innerHTML;
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>...`;
+        
+        try {
+            const res = await fetch(`${API_BASE}/admin/send-employee-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, email, password })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Failed to send OTP code');
+            
+            showToast('Verification code sent to employee email!', 'success');
+            document.getElementById('emp-otp-input-wrapper').classList.remove('hidden');
+            sendBtn.classList.add('hidden');
+        } catch (err) {
+            showToast(err.message, 'danger');
+        } finally {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = originalText;
+        }
+    });
+
+    document.getElementById('emp-verify-otp-btn')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('emp-reg-name').value.trim();
+        const email = document.getElementById('emp-reg-email').value.trim();
+        const otp = document.getElementById('emp-otp-input').value.trim();
+        
+        if (!otp) {
+            showToast('Please enter the verification code', 'warning');
+            return;
+        }
+        
+        const verifyBtn = document.getElementById('emp-verify-otp-btn');
+        const originalText = verifyBtn.innerHTML;
+        verifyBtn.disabled = true;
+        verifyBtn.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`;
+        
+        try {
+            const res = await fetch(`${API_BASE}/admin/verify-employee-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, otp })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message || 'Verification failed');
+            
+            showToast(`Employee ${name} verified & registered successfully!`, 'success');
+            
+            // Show email verified status
+            document.getElementById('emp-otp-input-wrapper').classList.add('hidden');
+            document.getElementById('emp-email-status').classList.remove('hidden');
+            
+            // Enable submit button
+            const submitBtn = document.getElementById('emp-register-submit-btn');
+            submitBtn.removeAttribute('disabled');
+            submitBtn.style.opacity = '1';
+            submitBtn.style.pointerEvents = 'auto';
+            
+            fetchAdminEmployees();
+        } catch (err) {
+            showToast(err.message, 'danger');
+        } finally {
+            verifyBtn.disabled = false;
+            verifyBtn.innerHTML = originalText;
+        }
+    });
+
+    document.getElementById('admin-create-employee-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        showToast('Employee account created and active!', 'success');
+        
+        // Reset form to default state
+        e.target.reset();
+        document.getElementById('emp-otp-input-wrapper').classList.add('hidden');
+        document.getElementById('emp-email-status').classList.add('hidden');
+        
+        const sendBtn = document.getElementById('emp-send-otp-btn');
+        sendBtn.classList.remove('hidden');
+        
+        const submitBtn = document.getElementById('emp-register-submit-btn');
+        submitBtn.setAttribute('disabled', 'true');
+        submitBtn.style.opacity = '0.5';
+        submitBtn.style.pointerEvents = 'none';
+        
+        fetchAdminEmployees();
+    });
 });
 
 async function handleChangePasswordSubmit(e) {
@@ -1389,4 +2465,273 @@ async function deleteComplaint(id) {
 
 // Expose globally for inline onclick
 window.deleteComplaint = deleteComplaint;
+
+let allEmployees = [];
+
+async function fetchAdminEmployees() {
+    try {
+        const res = await fetch(`${API_BASE}/admin/employees`);
+        allEmployees = await res.json();
+        renderEmployeesList(allEmployees);
+    } catch (err) {
+        console.error("Failed to fetch employees:", err);
+    }
+}
+
+function renderEmployeesList(employees) {
+    const body = document.getElementById('adm-employees-table-body');
+    if (!body) return;
+    body.innerHTML = '';
+    
+    if (employees.length === 0) {
+        body.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No employees registered yet.</td></tr>`;
+        return;
+    }
+    
+    employees.forEach(emp => {
+        const empIdStr = `EMP-${emp.id.toString().padStart(3, '0')}`;
+        body.innerHTML += `
+            <tr class="animate-up">
+                <td><strong style="color: var(--primary);">${empIdStr}</strong></td>
+                <td><span style="font-weight: 700;">${emp.name}</span></td>
+                <td><span style="opacity: 0.8;">${emp.email}</span></td>
+                <td class="nowrap">
+                    <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${emp.id}, '${emp.name}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                        <i class="fa-solid fa-trash-can"></i> Delete
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+async function deleteEmployee(userId, name) {
+    if (!confirm(`Are you sure you want to permanently delete employee account for ${name}?`)) {
+        return;
+    }
+    try {
+        const res = await fetch(`${API_BASE}/admin/users/${userId}`, {
+            method: 'DELETE'
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || 'Failed to delete employee account');
+        
+        showToast(`Employee account for ${name} deleted successfully.`, 'success');
+        fetchAdminEmployees();
+    } catch (err) {
+        showToast(err.message, 'danger');
+    }
+}
+
+async function populateEmployeesDropdown(currentlyAssignedId) {
+    try {
+        const res = await fetch(`${API_BASE}/admin/employees`);
+        const employees = await res.json();
+        const select = document.getElementById('assign-employee-select');
+        if (!select) return;
+        
+        select.innerHTML = '<option value="">-- Choose Employee --</option>';
+        
+        employees.forEach(emp => {
+            const option = document.createElement('option');
+            option.value = emp.id;
+            option.dataset.name = emp.name;
+            option.textContent = `${emp.name} (EMP-${emp.id.toString().padStart(3, '0')})`;
+            if (emp.id === currentlyAssignedId) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+    } catch (err) {
+        console.error("Failed to populate employee dropdown:", err);
+    }
+}
+
+async function assignWorkerToComplaint(complaintId) {
+    const select = document.getElementById('assign-employee-select');
+    const deadlineInput = document.getElementById('assign-deadline');
+    if (!select) return;
+    
+    const employeeId = select.value;
+    const selectedOption = select.options[select.selectedIndex];
+    const employeeName = selectedOption ? selectedOption.dataset.name : '';
+    const deadline = deadlineInput ? deadlineInput.value : '';
+    
+    if (!employeeId) {
+        showToast('Please select an employee to assign', 'warning');
+        return;
+    }
+    
+    const loadingToast = showToast('Assigning task...', 'info', 0);
+    try {
+        const res = await fetch(`${API_BASE}/complaints/assign`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ complaintId, employeeId, employeeName, deadline })
+        });
+        const data = await res.json();
+        
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
+        
+        if (data.success) {
+            showToast('Employee assigned and notified successfully!', 'success');
+            document.getElementById('modal-overlay').classList.remove('active');
+            refreshData();
+        } else {
+            showToast(data.message || 'Assignment failed', 'danger');
+        }
+    } catch (err) {
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
+        showToast('Connection error', 'danger');
+    }
+}
+
+function renderEmployeeView(complaints) {
+    const total = complaints.length;
+    const progress = complaints.filter(c => c.status === 'In Progress').length;
+    const resolved = complaints.filter(c => c.status === 'Resolved').length;
+    
+    document.getElementById('emp-assigned-count').textContent = total;
+    document.getElementById('emp-progress-count').textContent = progress;
+    document.getElementById('emp-resolved-count').textContent = resolved;
+    
+    const body = document.getElementById('emp-tasks-table-body');
+    if (!body) return;
+    body.innerHTML = '';
+    
+    if (complaints.length === 0) {
+        body.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2rem;">No assigned complaints at the moment.</td></tr>`;
+        return;
+    }
+    
+    complaints.forEach(c => {
+        const statusClass = c.status.toLowerCase().replace(/\s+/g, '');
+        const priorityClass = c.priority.toLowerCase();
+        
+        let deadlineText = 'Not Specified';
+        let deadlineStyle = '';
+        if (c.resolution_deadline) {
+            try {
+                // Parse date safely
+                const d = new Date(c.resolution_deadline.replace(' ', 'T'));
+                deadlineText = d.toLocaleString();
+                if (d < new Date() && c.status !== 'Resolved') {
+                    deadlineStyle = 'color: var(--danger); font-weight: 700;';
+                }
+            } catch (e) {
+                deadlineText = c.resolution_deadline;
+            }
+        }
+        
+        body.innerHTML += `
+            <tr class="animate-up">
+                <td class="nowrap"><strong style="color: var(--primary);">#${c.id}</strong></td>
+                <td><span style="font-weight: 700;">${c.title}</span></td>
+                <td><span style="opacity: 0.8;">${c.category}</span></td>
+                <td class="nowrap"><span style="${deadlineStyle}"><i class="fa-regular fa-clock" style="margin-right: 6px; opacity: 0.5;"></i>${deadlineText}</span></td>
+                <td class="nowrap"><span class="priority-badge ${priorityClass}"><i class="fa-solid fa-circle"></i> ${c.priority}</span></td>
+                <td class="nowrap"><span class="status-badge status-${statusClass}">${c.status}</span></td>
+                <td class="nowrap">
+                    <button class="btn btn-primary btn-sm" onclick="viewComplaint('${c.id}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                        <i class="fa-solid fa-eye"></i> Details
+                    </button>
+                </td>
+            </tr>
+        `;
+    });
+}
+
+async function submitWorkerUpdate(id) {
+    const status = document.getElementById('worker-update-status').value;
+    const reply = document.getElementById('worker-update-reply').value;
+    const worker_evidence = document.getElementById('worker-evidence-base64')?.value || '';
+    
+    if (status === 'Resolved' && !worker_evidence) {
+        showToast('Uploading proof of work evidence image is mandatory to resolve a complaint.', 'warning');
+        return;
+    }
+    
+    const loadingToast = showToast('Updating task & notifying admin...', 'info', 0);
+    try {
+        const res = await fetch(`${API_BASE}/complaints/update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                id, 
+                status, 
+                reply,
+                updater_role: 'employee',
+                employee_name: currentUser.name,
+                worker_evidence: worker_evidence
+            })
+        });
+        const data = await res.json();
+        
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
+        
+        if (data.success) {
+            showToast('Task updated successfully and admin notified!', 'success');
+            document.getElementById('modal-overlay').classList.remove('active');
+            refreshData();
+        } else {
+            showToast(data.message || 'Update failed', 'danger');
+        }
+    } catch (err) {
+        loadingToast.classList.remove('show');
+        setTimeout(() => loadingToast.remove(), 500);
+        showToast('Connection error', 'danger');
+    }
+}
+
+async function handleWorkerEvidenceUpload(input) {
+    const file = input.files[0];
+    if (!file) return;
+    
+    if (!file.type.startsWith('image/')) {
+        showToast('Please upload an image file as proof of work evidence.', 'warning');
+        input.value = '';
+        return;
+    }
+    
+    const displayFilename = document.getElementById('worker-evidence-filename');
+    const base64Input = document.getElementById('worker-evidence-base64');
+    const dropzone = document.getElementById('worker-evidence-dropzone');
+    
+    if (displayFilename) {
+        displayFilename.textContent = `Processing proof image: ${file.name}...`;
+    }
+    
+    try {
+        const base64 = await processFile(file);
+        if (base64Input) {
+            base64Input.value = base64;
+        }
+        if (displayFilename) {
+            displayFilename.innerHTML = `<span style="color: var(--success); font-weight: 800;"><i class="fa-solid fa-circle-check"></i> Proof uploaded: ${file.name}</span>`;
+        }
+        if (dropzone) {
+            dropzone.style.borderColor = 'var(--success)';
+            dropzone.style.background = 'rgba(16, 185, 129, 0.02)';
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Failed to process image file.', 'danger');
+        if (displayFilename) {
+            displayFilename.textContent = 'Upload failed, please try again.';
+        }
+    }
+}
+
+// Expose functions globally for inline onclick
+window.deleteEmployee = deleteEmployee;
+window.assignWorkerToComplaint = assignWorkerToComplaint;
+window.submitWorkerUpdate = submitWorkerUpdate;
+window.handleWorkerEvidenceUpload = handleWorkerEvidenceUpload;
+window.fetchAdminEmployees = fetchAdminEmployees;
+window.renderEmployeesList = renderEmployeesList;
+window.populateEmployeesDropdown = populateEmployeesDropdown;
+window.renderEmployeeView = renderEmployeeView;
 
