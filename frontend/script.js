@@ -834,49 +834,77 @@ window.viewComplaint = async (id) => {
             </div>
         ` : ''}
 
-        ${currentUser && currentUser.role === 'employee' ? `
-            <div class="modal-management-actions-form mt-2" style="border-top: 1px dashed var(--border); padding-top: 1.5rem;">
-                <h3 class="form-section-title"><i class="fa-solid fa-square-poll-horizontal"></i> Update Task Status</h3>
-                
-                <div class="form-group-modern">
-                    <label for="worker-update-status"><i class="fa-solid fa-signal"></i> Set Status</label>
-                    <div class="select-wrapper-modern">
-                        <select id="worker-update-status" style="width: 100%; height: 42px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.95rem; background: var(--bg-input); color: var(--text-main); padding: 0 1rem;">
-                            <option value="In Progress" ${c.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                            <option value="Resolved" ${c.status === 'Resolved' ? 'selected' : ''}>Mark Resolved</option>
-                        </select>
+        ${currentUser && currentUser.role === 'employee' ? (() => {
+            if (c.status === 'Resolved') {
+                return `
+                    <div class="modal-resolution-card mt-2" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 16px; padding: 1.25rem 1.5rem; text-align: center; margin-bottom: 1rem; position: relative; overflow: hidden;">
+                        <div style="position: absolute; bottom: -10px; right: -5px; font-size: 4rem; opacity: 0.04; color: #10b981; pointer-events: none;"><i class="fa-solid fa-circle-check"></i></div>
+                        <div style="font-size: 2.2rem; color: #10b981; margin-bottom: 0.5rem;"><i class="fa-solid fa-circle-check"></i></div>
+                        <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-main);">Complaint Already Resolved</h4>
+                        <p style="margin: 6px 0 0 0; font-size: 0.82rem; color: var(--text-muted);">This task has been completed and marked as resolved.</p>
                     </div>
-                </div>
-                
-                <div class="form-group-modern mt-1">
-                    <label for="worker-update-reply"><i class="fa-solid fa-reply-all"></i> Resolution / Progress Notes</label>
-                    <div class="textarea-wrapper-modern">
-                        <textarea id="worker-update-reply" placeholder="Type notes explaining progress or resolution. This will notify administrators to review..." rows="3" style="width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.95rem; background: var(--bg-input); color: var(--text-main); padding: 0.75rem 1rem; box-sizing: border-box;">${c.worker_notes || ''}</textarea>
+                `;
+            } else if (c.status === 'Under Review') {
+                return `
+                    <div class="modal-resolution-card mt-2" style="background: rgba(245, 158, 11, 0.05); border: 1px solid rgba(245, 158, 11, 0.15); border-radius: 16px; padding: 1.25rem 1.5rem; text-align: center; margin-bottom: 1rem; position: relative; overflow: hidden;">
+                        <div style="position: absolute; bottom: -10px; right: -5px; font-size: 4rem; opacity: 0.04; color: #f59e0b; pointer-events: none;"><i class="fa-solid fa-hourglass-half"></i></div>
+                        <div style="font-size: 2.2rem; color: #f59e0b; margin-bottom: 0.5rem;"><i class="fa-solid fa-hourglass-half"></i></div>
+                        <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-main);">Complaint Under Review</h4>
+                        <p style="margin: 6px 0 0 0; font-size: 0.82rem; color: var(--text-muted);">Your resolution has been submitted and is currently pending administrator review.</p>
                     </div>
-                </div>
+                `;
+            } else {
+                return `
+                    <div class="modal-management-actions-form mt-2" style="border-top: 1px dashed var(--border); padding-top: 1.5rem;">
+                        <h3 class="form-section-title"><i class="fa-solid fa-square-poll-horizontal"></i> Update Task Status</h3>
+                        
+                        <div class="form-group-modern">
+                            <label for="worker-update-status"><i class="fa-solid fa-signal"></i> Set Status</label>
+                            <div class="select-wrapper-modern">
+                                <select id="worker-update-status" style="width: 100%; height: 42px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.95rem; background: var(--bg-input); color: var(--text-main); padding: 0 1rem;">
+                                    <option value="In Progress" ${c.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                                    <option value="Resolved" ${c.status === 'Resolved' ? 'selected' : ''}>Mark Resolved</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group-modern mt-1">
+                            <label for="worker-update-reply"><i class="fa-solid fa-reply-all"></i> Resolution / Progress Notes</label>
+                            <div class="textarea-wrapper-modern">
+                                <textarea id="worker-update-reply" placeholder="Type notes explaining progress or resolution. This will notify administrators to review..." rows="3" style="width: 100%; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.95rem; background: var(--bg-input); color: var(--text-main); padding: 0.75rem 1rem; box-sizing: border-box;">${c.worker_notes || ''}</textarea>
+                            </div>
+                        </div>
 
-                <div class="form-group-modern mt-1" id="worker-evidence-group">
-                    <label class="assign-field-label" style="font-weight: 800; font-size: 0.82rem; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-camera"></i> Proof of Work Evidence <span id="evidence-required-badge" style="color: var(--danger); font-weight: 800; display: ${c.status === 'Resolved' ? 'inline-block' : 'none'};">* (Required)</span>
-                    </label>
-                    <input type="file" id="worker-evidence-file" accept="image/*" style="display: none;" onchange="handleWorkerEvidenceUpload(this)">
-                    <div class="file-upload-zone" id="worker-evidence-dropzone" onclick="document.getElementById('worker-evidence-file').click()" style="cursor: pointer; border: 2.5px dashed var(--border); border-radius: var(--radius-md); padding: 1.5rem; text-align: center; background: var(--bg-input); transition: all 0.2s ease; margin-top: 6px;">
-                        <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.8rem; color: var(--primary); margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;"></i>
-                        <span id="worker-evidence-filename" style="margin: 0; font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">
-                            Click to upload proof of work image
-                        </span>
+                        <div class="form-group-modern mt-1" id="worker-evidence-group">
+                            <label class="assign-field-label" style="font-weight: 800; font-size: 0.82rem; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                                <i class="fa-solid fa-camera"></i> Proof of Work Evidence <span id="evidence-required-badge" style="color: var(--danger); font-weight: 800; display: ${c.status === 'Resolved' ? 'inline-block' : 'none'};">* (Required)</span>
+                            </label>
+                            <input type="file" id="worker-evidence-file" accept="image/*" style="display: none;" onchange="handleWorkerEvidenceUpload(this)">
+                            <div class="file-upload-zone" id="worker-evidence-dropzone" onclick="document.getElementById('worker-evidence-file').click()" style="cursor: pointer; border: 2.5px dashed var(--border); border-radius: var(--radius-md); padding: 1.5rem; text-align: center; background: var(--bg-input); transition: all 0.2s ease; margin-top: 6px;">
+                                <i class="fa-solid fa-cloud-arrow-up" style="font-size: 1.8rem; color: var(--primary); margin-bottom: 8px; display: block; margin-left: auto; margin-right: auto;"></i>
+                                <span id="worker-evidence-filename" style="margin: 0; font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">
+                                    Click to upload proof of work image
+                                </span>
+                            </div>
+                            <input type="hidden" id="worker-evidence-base64" value="">
+                        </div>
                     </div>
-                    <input type="hidden" id="worker-evidence-base64" value="">
-                </div>
-            </div>
-        ` : ''}
+                `;
+            }
+        })() : ''}
     `;
 
     if (currentUser && currentUser.role === 'employee') {
-        modalActions.innerHTML = `
-            <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">Discard</button>
-            <button class="btn btn-primary" onclick="submitWorkerUpdate('${c.id}')"><i class="fa-solid fa-circle-check"></i> Submit Resolution</button>
-        `;
+        if (c.status === 'Resolved' || c.status === 'Under Review') {
+            modalActions.innerHTML = `
+                <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">Close Window</button>
+            `;
+        } else {
+            modalActions.innerHTML = `
+                <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">Discard</button>
+                <button class="btn btn-primary" onclick="submitWorkerUpdate('${c.id}')"><i class="fa-solid fa-circle-check"></i> Submit Resolution</button>
+            `;
+        }
     } else {
         modalActions.innerHTML = `
             <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">
@@ -1151,53 +1179,69 @@ window.manageComplaint = async (id) => {
             </div>`;
         })() : ''}
 
-        <!-- Management Actions Form -->
-        <div class="modal-management-actions-form">
+        ${c.status === 'Resolved' ? `
+            <div class="modal-resolution-card mt-2" style="background: rgba(16, 185, 129, 0.05); border: 1px solid rgba(16, 185, 129, 0.15); border-radius: 16px; padding: 1.25rem 1.5rem; text-align: center; margin-bottom: 1rem; position: relative; overflow: hidden;">
+                <div style="position: absolute; bottom: -10px; right: -5px; font-size: 4rem; opacity: 0.04; color: #10b981; pointer-events: none;"><i class="fa-solid fa-circle-check"></i></div>
+                <div style="font-size: 2.2rem; color: #10b981; margin-bottom: 0.5rem;"><i class="fa-solid fa-circle-check"></i></div>
+                <h4 style="margin: 0; font-size: 1rem; font-weight: 800; color: var(--text-main);">Complaint Already Resolved</h4>
+                <p style="margin: 6px 0 0 0; font-size: 0.82rem; color: var(--text-muted);">This complaint has been reviewed and marked as resolved.</p>
+            </div>
+        ` : `
+            <!-- Management Actions Form -->
+            <div class="modal-management-actions-form">
 
-            <h3 class="form-section-title"><i class="fa-solid fa-square-poll-horizontal"></i> Resolution & Status Update</h3>
-            
-            <div class="actions-grid-modern">
-                <div class="form-group-modern">
-                    <label for="update-status"><i class="fa-solid fa-signal"></i> Update Status</label>
-                    <div class="select-wrapper-modern">
-                        <select id="update-status">
-                            <option value="Pending" ${c.status === 'Pending' ? 'selected' : ''}>Pending Approval</option>
-                            <option value="In Progress" ${c.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
-                            <option value="Under Review" ${c.status === 'Under Review' ? 'selected' : ''}>Under Review</option>
-                            <option value="Resolved" ${c.status === 'Resolved' ? 'selected' : ''}>Mark Resolved</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down select-chevron"></i>
+                <h3 class="form-section-title"><i class="fa-solid fa-square-poll-horizontal"></i> Resolution & Status Update</h3>
+                
+                <div class="actions-grid-modern">
+                    <div class="form-group-modern">
+                        <label for="update-status"><i class="fa-solid fa-signal"></i> Update Status</label>
+                        <div class="select-wrapper-modern">
+                            <select id="update-status">
+                                <option value="Pending" ${c.status === 'Pending' ? 'selected' : ''}>Pending Approval</option>
+                                <option value="In Progress" ${c.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                                <option value="Under Review" ${c.status === 'Under Review' ? 'selected' : ''}>Under Review</option>
+                                <option value="Resolved" ${c.status === 'Resolved' ? 'selected' : ''}>Mark Resolved</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down select-chevron"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group-modern">
+                        <label for="update-priority"><i class="fa-solid fa-flag"></i> Set Priority</label>
+                        <div class="select-wrapper-modern">
+                            <select id="update-priority">
+                                <option value="Low" ${c.priority === 'Low' ? 'selected' : ''}>Low Priority</option>
+                                <option value="Medium" ${c.priority === 'Medium' ? 'selected' : ''}>Medium Priority</option>
+                                <option value="High" ${c.priority === 'High' ? 'selected' : ''}>High Priority</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down select-chevron"></i>
+                        </div>
                     </div>
                 </div>
                 
-                <div class="form-group-modern">
-                    <label for="update-priority"><i class="fa-solid fa-flag"></i> Set Priority</label>
-                    <div class="select-wrapper-modern">
-                        <select id="update-priority">
-                            <option value="Low" ${c.priority === 'Low' ? 'selected' : ''}>Low Priority</option>
-                            <option value="Medium" ${c.priority === 'Medium' ? 'selected' : ''}>Medium Priority</option>
-                            <option value="High" ${c.priority === 'High' ? 'selected' : ''}>High Priority</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down select-chevron"></i>
+                <div class="form-group-modern mt-1">
+                    <label for="update-reply"><i class="fa-solid fa-reply-all"></i> Official Admin Resolution Message</label>
+                    <div class="textarea-wrapper-modern">
+                        <textarea id="update-reply" placeholder="Type a comprehensive, helpful response detailing the actions taken to resolve this concern. The student will receive a notification and email instantly..." rows="4">${c.admin_reply || ''}</textarea>
                     </div>
                 </div>
             </div>
-            
-            <div class="form-group-modern mt-1">
-                <label for="update-reply"><i class="fa-solid fa-reply-all"></i> Official Admin Resolution Message</label>
-                <div class="textarea-wrapper-modern">
-                    <textarea id="update-reply" placeholder="Type a comprehensive, helpful response detailing the actions taken to resolve this concern. The student will receive a notification and email instantly..." rows="4">${c.admin_reply || ''}</textarea>
-                </div>
-            </div>
-        </div>
+        `}
 
     `;
 
-    modalActions.innerHTML = `
-        <button class="btn btn-danger" style="margin-right: auto;" onclick="deleteComplaint('${id}')"><i class="fa-solid fa-trash-can"></i> Delete Complaint</button>
-        <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">Discard</button>
-        <button class="btn btn-primary btn-save-resolution" onclick="submitAdminUpdate('${id}')"><i class="fa-solid fa-check-circle"></i> Save & Notify Student</button>
-    `;
+    if (c.status === 'Resolved') {
+        modalActions.innerHTML = `
+            <button class="btn btn-danger" style="margin-right: auto;" onclick="deleteComplaint('${id}')"><i class="fa-solid fa-trash-can"></i> Delete Complaint</button>
+            <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">Close Window</button>
+        `;
+    } else {
+        modalActions.innerHTML = `
+            <button class="btn btn-danger" style="margin-right: auto;" onclick="deleteComplaint('${id}')"><i class="fa-solid fa-trash-can"></i> Delete Complaint</button>
+            <button class="btn btn-secondary btn-modal-close" onclick="document.getElementById('modal-overlay').classList.remove('active')">Discard</button>
+            <button class="btn btn-primary btn-save-resolution" onclick="submitAdminUpdate('${id}')"><i class="fa-solid fa-check-circle"></i> Save & Notify Student</button>
+        `;
+    }
     modal.classList.add('active');
 
     // --- Live Countdown Timer (only for active/in-progress complaints) ---
