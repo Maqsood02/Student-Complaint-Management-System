@@ -3000,4 +3000,42 @@ input:focus, select:focus, textarea:focus {
     }
 }
 
+/* Modal Statistics Grid & Mobile Responsive modal adjustments */
+.modal-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 576px) {
+    .modal-overlay {
+        padding: 0.5rem !important;
+    }
+    .modal-card {
+        border-radius: var(--radius-md) !important;
+        max-height: 98vh !important;
+        max-width: 98% !important;
+    }
+    .modal-header {
+        padding: 1rem 1.25rem !important;
+    }
+    .modal-body {
+        padding: 1rem !important;
+    }
+    .modal-footer {
+        padding: 1rem !important;
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+    }
+    .modal-stats-grid {
+        grid-template-columns: 1fr !important;
+    }
+    
+    /* Ensure the buttons span full width in footer on mobile */
+    .modal-footer .btn {
+        width: 100% !important;
+        margin: 0 !important;
+    }
+}
+
 

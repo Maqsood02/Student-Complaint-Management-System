@@ -1013,7 +1013,7 @@ window.manageComplaint = async (id) => {
         
         ${c.worker_notes || c.worker_evidence ? `
             <div class="modal-resolution-card" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.15); margin-bottom: 1.5rem; border-radius: 16px; padding: 1.25rem 1.5rem; position: relative;">
-                <div class="resolution-card-decor" style="color: var(--primary);"><i class="fa-solid fa-clipboard-check"></i></div>
+                <div class="resolution-card-decor" style="color: var(--primary); opacity: 0.05;"><i class="fa-solid fa-clipboard-check"></i></div>
                 <label class="resolution-label" style="color: var(--primary); font-weight: 800; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px; margin-bottom: 0.5rem;">
                     <i class="fa-solid fa-user-check"></i> Worker Resolution Evidence
                 </label>
@@ -1087,7 +1087,7 @@ window.manageComplaint = async (id) => {
                 </div>
 
                 <!-- Worker info row -->
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:${deadlineDate ? '1.25rem' : '0'};">
+                <div class="modal-stats-grid" style="margin-bottom:${deadlineDate ? '1.25rem' : '0'};">
                     <div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1rem;">
                         <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:6px;">
                             <i class="fa-solid fa-user" style="margin-right:5px;"></i>Assigned Worker
@@ -1110,35 +1110,39 @@ window.manageComplaint = async (id) => {
                     if (isCompleted) {
                         return `
                 <!-- Task Completed — timer stopped -->
-                <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:14px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
-                    <div style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i class="fa-solid fa-circle-check" style="color:#10b981;font-size:1rem;"></i>
+                <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);border-radius:14px;padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:0.75rem;">
+                        <div style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="fa-solid fa-circle-check" style="color:#10b981;font-size:1rem;"></i>
+                        </div>
+                        <div style="flex:1;min-width:140px;">
+                            <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:4px;">Timer Status</div>
+                            <div style="font-size:0.95rem;font-weight:900;color:#10b981;font-family:'Outfit',monospace;">Task Completed — Timer Stopped</div>
+                        </div>
                     </div>
-                    <div style="flex:1;">
-                        <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:4px;">Timer Status</div>
-                        <div style="font-size:1rem;font-weight:900;color:#10b981;font-family:'Outfit',monospace;">Task Completed — Timer Stopped</div>
-                    </div>
-                    <span style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#10b981;padding:5px 14px;border-radius:100px;font-size:0.7rem;font-weight:900;text-transform:uppercase;flex-shrink:0;">
+                    <span style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);color:#10b981;padding:4px 10px;border-radius:100px;font-size:0.68rem;font-weight:900;text-transform:uppercase;flex-shrink:0;">
                         ${c.status === 'Under Review' ? 'Under Review' : 'Resolved'}
                     </span>
                 </div>`;
                     }
                     return `
                 <!-- Live Countdown Timer -->
-                <div style="background:${isOverdue ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isOverdue ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.07)'};border-radius:14px;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;">
-                    <div style="background:${timerAccent}18;border:1px solid ${timerAccent}30;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <i class="fa-solid fa-${isOverdue ? 'triangle-exclamation' : 'hourglass-half'}" style="color:${timerAccent};font-size:1rem;"></i>
-                    </div>
-                    <div style="flex:1;">
-                        <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:4px;">
-                            ${isOverdue ? 'Deadline Status' : 'Time Remaining'}
+                <div style="background:${isOverdue ? 'rgba(239,68,68,0.06)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isOverdue ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.07)'};border-radius:14px;padding:1rem;display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
+                    <div style="display:flex;align-items:center;gap:0.75rem;">
+                        <div style="background:${timerAccent}18;border:1px solid ${timerAccent}30;border-radius:10px;width:38px;height:38px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                            <i class="fa-solid fa-${isOverdue ? 'triangle-exclamation' : 'hourglass-half'}" style="color:${timerAccent};font-size:1rem;"></i>
                         </div>
-                        <div id="countdown-timer-${c.id}" style="font-size:1.1rem;font-weight:900;color:${timerAccent};font-family:'Outfit',monospace;letter-spacing:0.02em;">
-                            ${isOverdue ? '⚠ OVERDUE' : 'Calculating...'}
+                        <div style="flex:1;min-width:140px;">
+                            <div style="font-size:0.68rem;font-weight:800;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);margin-bottom:4px;">
+                                ${isOverdue ? 'Deadline Status' : 'Time Remaining'}
+                            </div>
+                            <div id="countdown-timer-${c.id}" style="font-size:1.05rem;font-weight:900;color:${timerAccent};font-family:'Outfit',monospace;letter-spacing:0.02em;">
+                                ${isOverdue ? '⚠ OVERDUE' : 'Calculating...'}
+                            </div>
                         </div>
                     </div>
                     ${isOverdue ? `
-                    <span style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;padding:5px 14px;border-radius:100px;font-size:0.7rem;font-weight:900;text-transform:uppercase;flex-shrink:0;">
+                    <span style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.25);color:#ef4444;padding:4px 10px;border-radius:100px;font-size:0.68rem;font-weight:900;text-transform:uppercase;flex-shrink:0;">
                         Admin Alerted
                     </span>
                     ` : ''}
@@ -1977,6 +1981,33 @@ function renderStudentView(complaints) {
     recentBody.innerHTML = '';
     trackBody.innerHTML = '';
 
+    if (complaints.length === 0) {
+        recentBody.innerHTML = `
+            <tr>
+                <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+                        <i class="fa-solid fa-folder-open" style="font-size: 2.2rem; opacity: 0.3;"></i>
+                        <span style="font-size: 0.92rem; font-weight: 600;">No complaints registered yet</span>
+                        <p style="font-size: 0.8rem; margin: 0; opacity: 0.8; max-width: 320px;">Submit a complaint using the 'Create Official Complaint' form to track live updates.</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        if (trackBody) {
+            trackBody.innerHTML = `
+                <tr>
+                    <td colspan="6" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+                            <i class="fa-solid fa-folder-open" style="font-size: 2.2rem; opacity: 0.3;"></i>
+                            <span style="font-size: 0.92rem; font-weight: 600;">No complaints registered yet</span>
+                            <p style="font-size: 0.8rem; margin: 0; opacity: 0.8; max-width: 320px;">Use the submit panel to file your first complaint.</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    }
+
     complaints.forEach((c, index) => {
         const statusClass = c.status.toLowerCase().replace(/\s+/g, '');
         const row = `
@@ -2025,6 +2056,33 @@ function renderAdminView(complaints) {
     const recentBody = document.getElementById('adm-recent-table-body');
     if (recentBody) {
         recentBody.innerHTML = '';
+    }
+
+    if (complaints.length === 0) {
+        manageBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+                        <i class="fa-solid fa-circle-info" style="font-size: 2.2rem; opacity: 0.3;"></i>
+                        <span style="font-size: 0.92rem; font-weight: 600;">No complaints in the system</span>
+                        <p style="font-size: 0.8rem; margin: 0; opacity: 0.8; max-width: 320px;">Complaints submitted by students will appear here for review and assignment.</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        if (recentBody) {
+            recentBody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                        <div style="display: flex; flex-direction: column; align-items: center; gap: 0.75rem;">
+                            <i class="fa-solid fa-circle-info" style="font-size: 2.2rem; opacity: 0.3;"></i>
+                            <span style="font-size: 0.92rem; font-weight: 600;">No recent activity</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }
+    }
         const highPriorityFirst = [...complaints].sort((a, b) => {
             const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
             return (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
