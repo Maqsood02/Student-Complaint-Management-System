@@ -3,6 +3,20 @@
  */
 
 const API_BASE = '/api';
+
+function getReadableEmployeeRole(role) {
+    const rolesMap = {
+        'Hostel': 'Hostel & Accommodation',
+        'Transport': 'Campus Transport',
+        'Academics': 'Academic Affairs',
+        'Classroom Maintenance': 'Classroom & Infrastructure',
+        'Library': 'Library Services',
+        'Technical': 'IT & Technical Support',
+        'Cafeteria': 'Cafeteria & Dining',
+        'Other': 'General Support'
+    };
+    return rolesMap[role] || role || 'General Support';
+}
 // Global Helper for Lightbox
 function openLightbox(src) {
     const lightbox = document.getElementById('lightbox');
@@ -589,7 +603,7 @@ function showDashboard() {
         if (currentUser.role === 'admin') {
             roleEl.textContent = 'System Administrator';
         } else if (currentUser.role === 'employee') {
-            const empRole = currentUser.employee_role || 'Support Specialist';
+            const empRole = getReadableEmployeeRole(currentUser.employee_role);
             roleEl.textContent = `${empRole} (EMP-${currentUser.id.toString().padStart(3, '0')})`;
         } else {
             roleEl.textContent = 'Student Scholar';
@@ -1886,7 +1900,14 @@ window.openAssignModal = async (id) => {
             });
             itemsHolder.appendChild(defaultOpt);
 
-            employees.forEach(emp => {
+            // Sort employees so that recommended ones (specialization matches complaint category) are at the top
+            const sortedEmployees = [...employees].sort((a, b) => {
+                const aMatch = a.employee_role === c.category ? 1 : 0;
+                const bMatch = b.employee_role === c.category ? 1 : 0;
+                return bMatch - aMatch;
+            });
+
+            sortedEmployees.forEach(emp => {
                 const empIdStr = `EMP-${emp.id.toString().padStart(3, '0')}`;
                 const initials = emp.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
                 
@@ -1898,11 +1919,13 @@ window.openAssignModal = async (id) => {
                     hiddenInput.value = emp.id;
                     hiddenInput.dataset.name = emp.name;
                 }
-                const empRole = emp.employee_role || 'General Support';
+                const empRole = getReadableEmployeeRole(emp.employee_role);
+                const isRecommended = emp.employee_role === c.category;
+                const recBadge = isRecommended ? `<span class="option-role-tag" style="background: rgba(16, 185, 129, 0.1); color: var(--success); border: 1px solid rgba(16, 185, 129, 0.2); margin-left: 8px;">Recommended</span>` : '';
                 opt.innerHTML = `
                     <div class="option-avatar">${initials}</div>
                     <div class="option-info">
-                        <div class="option-name">${emp.name} <span class="option-role-tag">${empRole}</span></div>
+                        <div class="option-name">${emp.name} <span class="option-role-tag">${empRole}</span> ${recBadge}</div>
                         <div class="option-id">${empIdStr} &bull; ${emp.email}</div>
                     </div>
                 `;
@@ -2615,14 +2638,14 @@ function renderEmployeesList(employees) {
     
     employees.forEach(emp => {
         const empIdStr = `EMP-${emp.id.toString().padStart(3, '0')}`;
-        const empRole = emp.employee_role || 'General Support';
+        const empRole = getReadableEmployeeRole(emp.employee_role);
         body.innerHTML += `
             <tr class="animate-up">
-                <td><strong style="color: var(--primary);">${empIdStr}</strong></td>
+                <td style="white-space: nowrap;"><strong style="color: var(--primary);">${empIdStr}</strong></td>
                 <td><span style="font-weight: 700;">${emp.name}</span></td>
                 <td><span style="opacity: 0.8;">${emp.email}</span></td>
-                <td><span class="role-badge student" style="background: rgba(139, 92, 246, 0.08); color: var(--secondary); border: 1px solid rgba(139, 92, 246, 0.18); font-weight: 700;">${empRole}</span></td>
-                <td class="nowrap">
+                <td style="white-space: nowrap;"><span class="role-badge student" style="background: rgba(139, 92, 246, 0.08); color: var(--secondary); border: 1px solid rgba(139, 92, 246, 0.18); font-weight: 700;">${empRole}</span></td>
+                <td style="white-space: nowrap;">
                     <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${emp.id}, '${emp.name}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
                         <i class="fa-solid fa-trash-can"></i> Delete
                     </button>

@@ -862,10 +862,20 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="emp-reg-role">Employee Job Role *</label>
+                                    <label for="emp-reg-role">Employee Work Specialization *</label>
                                     <div class="input-icon">
                                         <i class="fa-solid fa-briefcase"></i>
-                                        <input type="text" id="emp-reg-role" placeholder="E.g., Electrician, IT Support, Hostel Warden" required>
+                                        <select id="emp-reg-role" required style="width: 100%; text-align: left; padding: 0.75rem 1.25rem 0.75rem 2.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.95rem; font-weight: 600; background: var(--bg-input); color: var(--text-main); box-sizing: border-box;">
+                                            <option value="" disabled selected>Select Work Category</option>
+                                            <option value="Hostel">Hostel & Accommodation</option>
+                                            <option value="Transport">Campus Transport</option>
+                                            <option value="Academics">Academic Affairs</option>
+                                            <option value="Classroom Maintenance">Classroom & Infrastructure</option>
+                                            <option value="Library">Library Services</option>
+                                            <option value="Technical">IT & Technical Support</option>
+                                            <option value="Cafeteria">Cafeteria & Dining</option>
+                                            <option value="Other">Other / General Support</option>
+                                        </select>
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -918,11 +928,11 @@
                                 <table class="data-table">
                                     <thead>
                                         <tr>
-                                            <th>Employee ID</th>
-                                            <th>Name</th>
-                                            <th>Email</th>
-                                            <th>Specialization / Role</th>
-                                            <th>Actions</th>
+                                            <th style="white-space: nowrap;">Employee ID</th>
+                                            <th style="white-space: nowrap;">Name</th>
+                                            <th style="white-space: nowrap;">Email</th>
+                                            <th style="white-space: nowrap;">Specialization / Role</th>
+                                            <th style="white-space: nowrap;">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="adm-employees-table-body">
