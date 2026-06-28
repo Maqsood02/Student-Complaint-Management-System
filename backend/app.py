@@ -12,6 +12,104 @@ from dotenv import load_dotenv
 
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
+import base64
+import hashlib
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import padding
+
+class AES256Cipher:
+    def __init__(self, key: str = None):
+        if not key:
+            key = os.getenv("AES_256_KEY")
+        
+        if not key:
+            secret = os.getenv("FLASK_SECRET_KEY", "supersecretkey_scms_2026")
+            self.key = hashlib.sha256(secret.encode('utf-8')).digest()
+        else:
+            try:
+                decoded = base64.b64decode(key)
+                if len(decoded) == 32:
+                    self.key = decoded
+                else:
+                    raise ValueError()
+            except Exception:
+                self.key = hashlib.sha256(key.encode('utf-8')).digest()
+
+    def encrypt(self, plaintext: str) -> str:
+        if plaintext is None:
+            return None
+        if not isinstance(plaintext, str):
+            plaintext = str(plaintext)
+        if not plaintext.strip():
+            return plaintext
+        try:
+            data = plaintext.encode('utf-8')
+            iv = os.urandom(16)
+            cipher = Cipher(algorithms.AES(self.key), modes.CBC(iv), backend=default_backend())
+            encryptor = cipher.encryptor()
+            padder = padding.PKCS7(128).padder()
+            padded_data = padder.update(data) + padder.finalize()
+            ciphertext = encryptor.update(padded_data) + encryptor.finalize()
+            combined = iv + ciphertext
+            return base64.b64encode(combined).decode('utf-8')
+        except Exception as e:
+            print(f"Encryption error: {e}")
+            return plaintext
+
+    def decrypt(self, ciphertext: str) -> str:
+        if ciphertext is None:
+            return None
+        if not isinstance(ciphertext, str) or not ciphertext.strip():
+            return ciphertext
+        try:
+            try:
+                combined = base64.b64decode(ciphertext.encode('utf-8'), validate=True)
+            except Exception:
+                return ciphertext
+            
+            if len(combined) < 32:
+                return ciphertext
+                
+            iv = combined[:16]
+            actual_ciphertext = combined[16:]
+            cipher = Cipher(algorithms.AES(self.key), modes.CBC(iv), backend=default_backend())
+            decryptor = cipher.decryptor()
+            padded_data = decryptor.update(actual_ciphertext) + decryptor.finalize()
+            unpadder = padding.PKCS7(128).unpadder()
+            data = unpadder.update(padded_data) + unpadder.finalize()
+            return data.decode('utf-8')
+        except Exception as e:
+            return ciphertext
+
+cipher_helper = AES256Cipher()
+
+ENCRYPTED_FIELDS = {'student_name', 'student_email', 'title', 'description', 'attached_file', 'admin_reply', 'worker_notes', 'worker_evidence'}
+
+def encrypt_complaint_dict(data: dict) -> dict:
+    if not data:
+        return data
+    res = dict(data)
+    for field in ENCRYPTED_FIELDS:
+        if field in res and res[field] is not None:
+            res[field] = cipher_helper.encrypt(res[field])
+    return res
+
+def decrypt_complaint_dict(data: dict) -> dict:
+    if not data:
+        return data
+    res = dict(data)
+    for field in ENCRYPTED_FIELDS:
+        if field in res and res[field] is not None:
+            val = res[field]
+            if isinstance(val, (bytes, bytearray)):
+                try:
+                    val = val.decode('utf-8', errors='ignore')
+                except Exception:
+                    pass
+            res[field] = cipher_helper.decrypt(str(val))
+    return res
+
 frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
 app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "scms_secret_key_123")
@@ -440,13 +538,21 @@ def submit_complaint():
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Encrypt fields for database storage
+        enc_student_name = cipher_helper.encrypt(student_name)
+        enc_student_email = cipher_helper.encrypt(student_email)
+        enc_title = cipher_helper.encrypt(title)
+        enc_description = cipher_helper.encrypt(description)
+        enc_attached_file_value = cipher_helper.encrypt(attached_file_value) if attached_file_value else None
+
         cursor.execute("""
             INSERT INTO complaints (id, student_id, student_name, student_email, title, description, category, priority, status, attached_file)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'Pending', %s)
-        """, (complaint_id, student_id, student_name, student_email, title, description, category, priority, attached_file_value))
+        """, (complaint_id, student_id, enc_student_name, enc_student_email, enc_title, enc_description, category, priority, enc_attached_file_value))
         conn.commit()
 
-        # Trigger Email Service in background
+        # Trigger Email Service in background using plain text details
         email_data = {
             "studentEmail": student_email,
             "studentName": student_name,
@@ -558,6 +664,9 @@ def get_complaints(user_role, user_id):
         
         complaints = cursor.fetchall()
         
+        # Decrypt complaint details
+        complaints = [decrypt_complaint_dict(c) for c in complaints]
+        
         # Format resolution_deadline and created_at if necessary
         for comp in complaints:
             if 'resolution_deadline' in comp and comp['resolution_deadline']:
@@ -575,7 +684,7 @@ def get_complaints(user_role, user_id):
             cursor.close()
         if conn:
             conn.close()
-
+ 
 @app.route('/api/complaints/detail/<complaint_id>', methods=['GET'])
 def get_complaint_detail(complaint_id):
     conn = None
@@ -587,6 +696,10 @@ def get_complaint_detail(complaint_id):
         complaint = cursor.fetchone()
         if not complaint:
             return jsonify({"success": False, "message": "Complaint not found"}), 404
+        
+        # Decrypt complaint detail
+        complaint = decrypt_complaint_dict(complaint)
+        
         return jsonify(complaint)
     except Exception as e:
         return jsonify({"success": False, "message": f"Database error: {str(e)}"}), 500
@@ -619,6 +732,9 @@ def update_complaint():
         if not comp:
             return jsonify({"success": False, "message": "Complaint not found"}), 404
 
+        # Decrypt fetched details
+        comp = decrypt_complaint_dict(comp)
+
         if updater_role == 'employee':
             # Enforce proof of work evidence if marking as Resolved
             db_status = status
@@ -627,12 +743,16 @@ def update_complaint():
                 if not worker_evidence or not str(worker_evidence).strip():
                     return jsonify({"success": False, "message": "Uploading proof of work evidence is mandatory to resolve a complaint."}), 400
             
+            # Encrypt updates for DB storage
+            enc_reply = cipher_helper.encrypt(reply) if reply else None
+            enc_worker_evidence = cipher_helper.encrypt(worker_evidence) if worker_evidence else None
+
             # Update complaints table with worker notes and evidence
             cursor.execute("""
                 UPDATE complaints 
                 SET status = %s, worker_notes = %s, worker_evidence = %s 
                 WHERE id = %s
-            """, (db_status, reply, worker_evidence, cid))
+            """, (db_status, enc_reply, enc_worker_evidence, cid))
             
             # Notify all admins in the database
             cursor.execute("SELECT id FROM users WHERE role = 'admin'")
@@ -665,14 +785,15 @@ def update_complaint():
             
         else:
             # Updater is admin
+            enc_reply = cipher_helper.encrypt(reply) if reply else None
             if priority:
                 cursor.execute("""
                     UPDATE complaints SET status = %s, priority = %s, admin_reply = %s WHERE id = %s
-                """, (status, priority, reply, cid))
+                """, (status, priority, enc_reply, cid))
             else:
                 cursor.execute("""
                     UPDATE complaints SET status = %s, admin_reply = %s WHERE id = %s
-                """, (status, reply, cid))
+                """, (status, enc_reply, cid))
             
             # Smart notification for Student
             msg = f"Your complaint '{comp['title']}' is now {status}."
@@ -688,18 +809,8 @@ def update_complaint():
             conn.commit()
             
             # Trigger Email to Student in background
-            # Safely decode worker_evidence (MySQL can return it as bytes)
             raw_evidence = comp.get('worker_evidence')
-            if isinstance(raw_evidence, (bytes, bytearray)):
-                raw_evidence = raw_evidence.decode('utf-8', errors='ignore')
-            elif raw_evidence:
-                raw_evidence = str(raw_evidence)
-
             raw_notes = comp.get('worker_notes')
-            if isinstance(raw_notes, (bytes, bytearray)):
-                raw_notes = raw_notes.decode('utf-8', errors='ignore')
-            elif raw_notes:
-                raw_notes = str(raw_notes)
 
             email_data = {
                 "studentEmail": comp['student_email'],
@@ -884,6 +995,9 @@ def assign_complaint():
             conn.close()
             return jsonify({"success": False, "message": "Complaint not found"}), 404
             
+        # Decrypt complaint details
+        comp = decrypt_complaint_dict(comp)
+        
         new_status = 'In Progress' if comp['status'] == 'Pending' else comp['status']
         
         cursor.execute("""
@@ -1082,6 +1196,9 @@ def overdue_notify():
         comp = cursor.fetchone()
         if not comp:
             return jsonify({"success": False, "message": "Complaint not found"}), 404
+
+        # Decrypt complaint details
+        comp = decrypt_complaint_dict(comp)
 
         if comp['status'] in ('Resolved', 'Under Review'):
             return jsonify({"success": True, "message": "Complaint already resolved/under review — no alert needed."})
