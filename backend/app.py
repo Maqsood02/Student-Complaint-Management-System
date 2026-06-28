@@ -21,7 +21,7 @@ from cryptography.hazmat.primitives import padding
 class AES256Cipher:
     def __init__(self, key: str = None):
         if not key:
-            key = os.getenv("AES_256_KEY")
+            key = os.getenv("AES_256_KEY", "Vfkouc3tfMycNuilLoCcSpUiWNkybNuITGh6AUV5H+s=")
         
         if not key:
             secret = os.getenv("FLASK_SECRET_KEY", "supersecretkey_scms_2026")
@@ -118,9 +118,9 @@ bcrypt = Bcrypt(app)
 
 # Database Configuration
 # NOTE: If DB_PASS is empty in .env, os.getenv returns "", which might be wrong if a password is required.
-_db_pass = os.getenv("DB_PASS")
+_db_pass = os.getenv("DB_PASS", "uJi1pksuAqh0SoFAYBOg")
 if not _db_pass: # Handles both missing and empty strings
-    _db_pass = "Maqs@879240"
+    _db_pass = "uJi1pksuAqh0SoFAYBOg"
 
 _db_port = os.getenv("DB_PORT", "3306")
 if not _db_port or not str(_db_port).strip():
@@ -132,11 +132,11 @@ else:
         _db_port = 3306
 
 db_config = {
-    "host": os.getenv("DB_HOST", "localhost"),
+    "host": os.getenv("DB_HOST", "b8qbbuf33slfekqz3mqx-mysql.services.clever-cloud.com"),
     "port": _db_port,
-    "user": os.getenv("DB_USER", "root"),
+    "user": os.getenv("DB_USER", "uky5ozrucwcgp4dn"),
     "password": _db_pass,
-    "database": os.getenv("DB_NAME", "scms_db"),
+    "database": os.getenv("DB_NAME", "b8qbbuf33slfekqz3mqx"),
     "charset": "utf8mb4",
     "use_unicode": True
 }
