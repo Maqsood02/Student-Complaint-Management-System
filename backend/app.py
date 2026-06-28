@@ -10,7 +10,7 @@ import mysql.connector
 from flask_bcrypt import Bcrypt
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '.env'))
 
 frontend_dir = os.path.join(os.path.dirname(__file__), '..', 'frontend')
 app = Flask(__name__, static_folder=frontend_dir, static_url_path='')
@@ -386,7 +386,8 @@ def login():
                     "id": user['id'],
                     "name": user['name'],
                     "email": user['email'],
-                    "role": user['role']
+                    "role": user['role'],
+                    "employee_role": user.get('employee_role')
                 }
             })
         
@@ -482,6 +483,18 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        
+        # Check and add employee_role column to users table if it doesn't exist
+        try:
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'employee_role'")
+            result = cursor.fetchone()
+            if not result:
+                print("Adding 'employee_role' column to 'users' table...")
+                cursor.execute("ALTER TABLE users ADD COLUMN employee_role VARCHAR(100) NULL")
+                print("'employee_role' column added successfully.")
+        except Exception as ex:
+            print(f"Error checking/adding employee_role column: {ex}")
+            
         conn.commit()
         cursor.close()
         conn.close()
@@ -722,7 +735,7 @@ def admin_get_employees():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT id, name, email, role FROM users WHERE role = 'employee' ORDER BY name ASC")
+        cursor.execute("SELECT id, name, email, role, employee_role FROM users WHERE role = 'employee' ORDER BY name ASC")
         employees = cursor.fetchall()
         return jsonify(employees)
     except Exception as e:
@@ -740,8 +753,9 @@ def send_employee_otp():
         name = data.get('name')
         email = data.get('email')
         password = data.get('password')
+        employee_role = data.get('employee_role')
         
-        if not email or not name or not password:
+        if not email or not name or not password or not employee_role:
             return jsonify({"success": False, "message": "Missing fields"}), 400
             
         conn = get_db_connection()
@@ -759,6 +773,7 @@ def send_employee_otp():
         pending_employees[email] = {
             "name": name,
             "password": password,
+            "employee_role": employee_role,
             "otp": otp,
             "timestamp": datetime.datetime.now()
         }
@@ -799,8 +814,8 @@ def verify_employee_otp():
         
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO users (name, email, password, role) VALUES (%s, %s, %s, 'employee')",
-                       (emp_data['name'], email, hashed_pw))
+        cursor.execute("INSERT INTO users (name, email, password, role, employee_role) VALUES (%s, %s, %s, 'employee', %s)",
+                       (emp_data['name'], email, hashed_pw, emp_data.get('employee_role')))
         user_id = cursor.lastrowid
         conn.commit()
         cursor.close()

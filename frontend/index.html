@@ -862,6 +862,13 @@
                                     </div>
                                 </div>
                                 <div class="form-group">
+                                    <label for="emp-reg-role">Employee Job Role *</label>
+                                    <div class="input-icon">
+                                        <i class="fa-solid fa-briefcase"></i>
+                                        <input type="text" id="emp-reg-role" placeholder="E.g., Electrician, IT Support, Hostel Warden" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
                                     <label for="emp-reg-email">Email Address *</label>
                                     <div style="display: flex; gap: 0.5rem; flex-wrap: nowrap; width: 100%; align-items: center;">
                                         <div class="input-icon" style="flex: 1;">
@@ -914,12 +921,13 @@
                                             <th>Employee ID</th>
                                             <th>Name</th>
                                             <th>Email</th>
+                                            <th>Specialization / Role</th>
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody id="adm-employees-table-body">
                                         <tr>
-                                            <td colspan="3" style="text-align: center; color: var(--text-muted);">No employees registered yet.</td>
+                                            <td colspan="5" style="text-align: center; color: var(--text-muted);">No employees registered yet.</td>
                                         </tr>
                                     </tbody>
                                 </table>

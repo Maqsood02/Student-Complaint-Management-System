@@ -589,7 +589,8 @@ function showDashboard() {
         if (currentUser.role === 'admin') {
             roleEl.textContent = 'System Administrator';
         } else if (currentUser.role === 'employee') {
-            roleEl.textContent = `Support Specialist (EMP-${currentUser.id.toString().padStart(3, '0')})`;
+            const empRole = currentUser.employee_role || 'Support Specialist';
+            roleEl.textContent = `${empRole} (EMP-${currentUser.id.toString().padStart(3, '0')})`;
         } else {
             roleEl.textContent = 'Student Scholar';
         }
@@ -1380,11 +1381,29 @@ window.openAssignModal = async (id) => {
                 max-width: 500px !important;
                 border-radius: 24px;
                 box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
-                overflow: visible !important;
+                max-height: 85vh;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden !important;
             }
             #modal-overlay.active .modal-body {
-                overflow: visible !important;
+                overflow-y: auto !important;
                 padding: 2rem;
+            }
+            .assign-form-container {
+                padding-bottom: 160px; /* Space for the absolute custom dropdown */
+            }
+            .option-role-tag {
+                background: rgba(99, 102, 241, 0.08);
+                color: var(--primary);
+                font-size: 0.72rem;
+                padding: 2px 8px;
+                border-radius: 100px;
+                font-weight: 750;
+                margin-left: 8px;
+                display: inline-block;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
             }
             .assign-header-card {
                 background: linear-gradient(135deg, rgba(79, 70, 229, 0.05) 0%, rgba(139, 92, 246, 0.03) 100%);
@@ -1879,10 +1898,11 @@ window.openAssignModal = async (id) => {
                     hiddenInput.value = emp.id;
                     hiddenInput.dataset.name = emp.name;
                 }
+                const empRole = emp.employee_role || 'General Support';
                 opt.innerHTML = `
                     <div class="option-avatar">${initials}</div>
                     <div class="option-info">
-                        <div class="option-name">${emp.name}</div>
+                        <div class="option-name">${emp.name} <span class="option-role-tag">${empRole}</span></div>
                         <div class="option-id">${empIdStr} &bull; ${emp.email}</div>
                     </div>
                 `;
@@ -2392,7 +2412,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const filtered = allEmployees.filter(emp => 
             emp.name.toLowerCase().includes(query) || 
-            emp.email.toLowerCase().includes(query)
+            emp.email.toLowerCase().includes(query) ||
+            (emp.employee_role || '').toLowerCase().includes(query)
         );
         renderEmployeesList(filtered);
     });
@@ -2402,8 +2423,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const name = document.getElementById('emp-reg-name').value.trim();
         const email = document.getElementById('emp-reg-email').value.trim();
         const password = document.getElementById('emp-reg-password').value.trim();
+        const employee_role = document.getElementById('emp-reg-role').value.trim();
         
-        if (!name || !email || !password) {
+        if (!name || !email || !password || !employee_role) {
             showToast('All fields are required to send OTP code', 'warning');
             return;
         }
@@ -2417,7 +2439,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const res = await fetch(`${API_BASE}/admin/send-employee-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password })
+                body: JSON.stringify({ name, email, password, employee_role })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.message || 'Failed to send OTP code');
@@ -2587,17 +2609,19 @@ function renderEmployeesList(employees) {
     body.innerHTML = '';
     
     if (employees.length === 0) {
-        body.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No employees registered yet.</td></tr>`;
+        body.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No employees registered yet.</td></tr>`;
         return;
     }
     
     employees.forEach(emp => {
         const empIdStr = `EMP-${emp.id.toString().padStart(3, '0')}`;
+        const empRole = emp.employee_role || 'General Support';
         body.innerHTML += `
             <tr class="animate-up">
                 <td><strong style="color: var(--primary);">${empIdStr}</strong></td>
                 <td><span style="font-weight: 700;">${emp.name}</span></td>
                 <td><span style="opacity: 0.8;">${emp.email}</span></td>
+                <td><span class="role-badge student" style="background: rgba(139, 92, 246, 0.08); color: var(--secondary); border: 1px solid rgba(139, 92, 246, 0.18); font-weight: 700;">${empRole}</span></td>
                 <td class="nowrap">
                     <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${emp.id}, '${emp.name}')" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">
                         <i class="fa-solid fa-trash-can"></i> Delete
