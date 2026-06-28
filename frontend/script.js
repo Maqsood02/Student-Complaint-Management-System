@@ -797,7 +797,18 @@ window.viewComplaint = async (id) => {
             </div>
         </div>
 
-        ${c.attached_file ? (() => {
+        ${(() => {
+            if (!c.attached_file) {
+                return `
+                <div class="detail-group">
+                    <label class="modal-section-label">
+                        <i class="fa-solid fa-paperclip"></i> Student Uploaded Evidence
+                    </label>
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                        No supportive evidence files uploaded by the student.
+                    </div>
+                </div>`;
+            }
             const evidenceSrc = c.attached_file.startsWith('data:') ? c.attached_file : `/uploads/${c.attached_file}`;
             const isPDF = c.attached_file.toLowerCase().endsWith('.pdf') || c.attached_file.startsWith('data:application/pdf');
             if (isPDF) {
@@ -837,7 +848,7 @@ window.viewComplaint = async (id) => {
                     </div>
                 </div>
             </div>`;
-        })() : ''}
+        })()}
 
         ${c.admin_reply ? `
             <div class="modal-resolution-card">
@@ -846,6 +857,32 @@ window.viewComplaint = async (id) => {
                     <i class="fa-solid fa-shield-check"></i> Official Resolution
                 </label>
                 <div class="resolution-text">"${c.admin_reply}"</div>
+            </div>
+        ` : ''}
+
+        ${c.worker_notes || c.worker_evidence ? `
+            <div class="modal-resolution-card" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.15); margin-top: 1.5rem; margin-bottom: 1.5rem; border-radius: 16px; padding: 1.25rem 1.5rem; position: relative;">
+                <div class="resolution-card-decor" style="color: var(--primary); opacity: 0.05;"><i class="fa-solid fa-clipboard-check"></i></div>
+                <label class="resolution-label" style="color: var(--primary); font-weight: 800; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 6px; margin-bottom: 0.5rem;">
+                    <i class="fa-solid fa-user-check"></i> Worker Resolution Evidence
+                </label>
+                ${c.worker_notes ? `<div class="resolution-text" style="font-size: 0.9rem; color: var(--text-main); margin-bottom: 0.75rem; font-style: italic;">"${c.worker_notes}"</div>` : ''}
+                ${c.worker_evidence ? (() => {
+                    const wEvidenceSrc = c.worker_evidence.startsWith('data:') ? c.worker_evidence : `/uploads/${c.worker_evidence}`;
+                    return `
+                    <div class="detail-group" style="margin-top: 0.75rem;">
+                        <label class="modal-section-label" style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 4px;">Proof of Work Image:</label>
+                        <div class="evidence-gallery-card" style="margin-top: 4px;">
+                            <div class="evidence-thumbnail-wrapper" onclick="openLightbox('${wEvidenceSrc}')" style="max-width: 250px; border-radius: var(--radius-sm); overflow: hidden; border: 1.5px solid var(--border); cursor: zoom-in; position: relative;">
+                                <img src="${wEvidenceSrc}" alt="Worker Proof of Work" class="evidence-thumbnail-img" style="width: 100%; height: auto; display: block;" onerror="handleImageError(this)">
+                                <div class="evidence-overlay-hover">
+                                    <i class="fa-solid fa-magnifying-glass-plus"></i>
+                                    <span>View Proof</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+                })() : ''}
             </div>
         ` : ''}
 
@@ -1012,7 +1049,18 @@ window.manageComplaint = async (id) => {
             ` : ''}
         </div>
         
-        ${c.attached_file ? (() => {
+        ${(() => {
+            if (!c.attached_file) {
+                return `
+                <div class="detail-group">
+                    <label class="modal-section-label">
+                        <i class="fa-solid fa-paperclip"></i> Student Uploaded Evidence
+                    </label>
+                    <div style="background: rgba(255, 255, 255, 0.02); border: 1px dashed var(--border); border-radius: var(--radius-sm); padding: 1rem; text-align: center; color: var(--text-muted); font-size: 0.85rem;">
+                        No supportive evidence files uploaded by the student.
+                    </div>
+                </div>`;
+            }
             const evidenceSrc = c.attached_file.startsWith('data:') ? c.attached_file : `/uploads/${c.attached_file}`;
             const isPDF = c.attached_file.toLowerCase().endsWith('.pdf') || c.attached_file.startsWith('data:application/pdf');
             if (isPDF) {
@@ -1052,7 +1100,7 @@ window.manageComplaint = async (id) => {
                     </div>
                 </div>
             </div>`;
-        })() : ''}
+        })()}
         
         ${c.worker_notes || c.worker_evidence ? `
             <div class="modal-resolution-card" style="background: rgba(99, 102, 241, 0.05); border: 1px solid rgba(99, 102, 241, 0.15); margin-bottom: 1.5rem; border-radius: 16px; padding: 1.25rem 1.5rem; position: relative;">
@@ -1319,6 +1367,29 @@ window.manageComplaint = async (id) => {
     }
 
 };
+
+window.toggleEmployeeDropdown = (e) => {
+    e.stopPropagation();
+    const trigger = document.getElementById('custom-employee-select-trigger');
+    const list = document.getElementById('custom-employee-options-list');
+    if (!trigger || !list) return;
+    
+    if (list.classList.contains('hidden')) {
+        trigger.classList.add('active');
+        list.classList.remove('hidden');
+        const searchInput = document.getElementById('custom-employee-search');
+        if (searchInput) {
+            searchInput.value = '';
+            const items = list.querySelectorAll('.custom-select-option');
+            items.forEach(item => item.style.display = 'flex');
+            setTimeout(() => searchInput.focus(), 60);
+        }
+    } else {
+        trigger.classList.remove('active');
+        list.classList.add('hidden');
+    }
+};
+
 
 window.openAssignModal = async (id) => {
     let c = allComplaints.find(item => item.id === id);
@@ -1781,7 +1852,7 @@ window.openAssignModal = async (id) => {
                     <i class="fa-solid fa-user-tie"></i> Select Employee *
                 </label>
                 <div class="custom-select-container">
-                    <div class="custom-select-trigger" id="custom-employee-select-trigger">
+                    <div class="custom-select-trigger" id="custom-employee-select-trigger" onclick="toggleEmployeeDropdown(event)">
                         <span id="custom-employee-select-value">-- Choose Employee --</span>
                         <i class="fa-solid fa-chevron-down custom-select-arrow"></i>
                     </div>
@@ -1821,10 +1892,10 @@ window.openAssignModal = async (id) => {
         </button>
     `;
 
-    // Populate custom dropdown with employees
     try {
         const res = await fetch(`${API_BASE}/admin/employees`);
-        const employees = await res.json();
+        const data = await res.json();
+        const employees = Array.isArray(data) ? data : [];
         
         const trigger = document.getElementById('custom-employee-select-trigger');
         const list = document.getElementById('custom-employee-options-list');
@@ -1834,37 +1905,11 @@ window.openAssignModal = async (id) => {
         const searchInput = document.getElementById('custom-employee-search');
         
         if (trigger && list && itemsHolder && valueSpan && hiddenInput) {
-            const openDropdown = () => {
-                trigger.classList.add('active');
-                list.classList.remove('hidden');
-                if (searchInput) {
-                    searchInput.value = '';
-                    // Reset filter on open
-                    const items = itemsHolder.querySelectorAll('.custom-select-option');
-                    items.forEach(item => item.style.display = 'flex');
-                    setTimeout(() => searchInput.focus(), 60);
-                }
-            };
-            
-            const closeDropdown = () => {
-                trigger.classList.remove('active');
-                list.classList.add('hidden');
-            };
-
-            // Setup trigger click event
-            trigger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (list.classList.contains('hidden')) {
-                    openDropdown();
-                } else {
-                    closeDropdown();
-                }
-            });
-            
             // Document click to close dropdown when clicking outside
             const clickOutsideHandler = (e) => {
                 if (!trigger.contains(e.target) && !list.contains(e.target)) {
-                    closeDropdown();
+                    trigger.classList.remove('active');
+                    list.classList.add('hidden');
                 }
             };
             document.addEventListener('click', clickOutsideHandler);
@@ -1896,7 +1941,8 @@ window.openAssignModal = async (id) => {
                 hiddenInput.dataset.name = '';
                 itemsHolder.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
                 defaultOpt.classList.add('selected');
-                closeDropdown();
+                trigger.classList.remove('active');
+                list.classList.add('hidden');
             });
             itemsHolder.appendChild(defaultOpt);
 
@@ -1936,7 +1982,8 @@ window.openAssignModal = async (id) => {
                     hiddenInput.dataset.name = emp.name;
                     itemsHolder.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('selected'));
                     opt.classList.add('selected');
-                    closeDropdown();
+                    trigger.classList.remove('active');
+                    list.classList.add('hidden');
                 });
                 itemsHolder.appendChild(opt);
             });
