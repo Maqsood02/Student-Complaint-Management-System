@@ -339,32 +339,6 @@ function setupEventListeners() {
         if (e.target === devModal) closeDevModal();
     });
 
-    // Team Modal Event Listeners
-    const teamModal = document.getElementById('team-modal-overlay');
-    const closeTeamModalBtn = document.getElementById('close-team-modal');
-    const closeTeamModalBtn2 = document.getElementById('close-team-modal-btn');
-    
-    const openTeamModal = () => {
-        if (teamModal) teamModal.classList.add('active');
-    };
-    
-    const closeTeamModal = () => {
-        if (teamModal) teamModal.classList.remove('active');
-    };
-
-    document.querySelectorAll('.team-profile-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            openTeamModal();
-        });
-    });
-
-    closeTeamModalBtn?.addEventListener('click', closeTeamModal);
-    closeTeamModalBtn2?.addEventListener('click', closeTeamModal);
-    teamModal?.addEventListener('click', (e) => {
-        if (e.target === teamModal) closeTeamModal();
-    });
 }
 
 // --- AUTH FUNCTIONS ---
