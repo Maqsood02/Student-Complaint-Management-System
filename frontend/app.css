@@ -2857,6 +2857,123 @@ input:focus, select:focus, textarea:focus {
     margin-top: 0 !important;
 }
 
+/* Dev Team Modal Layout Updates */
+#dev-modal-overlay .dev-modal-card {
+    max-width: 800px;
+}
+
+.dev-team-row {
+    display: flex;
+    justify-content: center;
+    gap: 2.5rem;
+    width: 100%;
+    margin-bottom: 1.5rem;
+}
+
+.dev-profile-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 320px;
+}
+
+.dev-name-small {
+    font-size: 1.85rem;
+    font-weight: 900;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #4f46e5 0%, #8b5cf6 50%, #06b6d4 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0 0 0.35rem 0;
+    text-align: center;
+}
+
+[data-theme="dark"] .dev-name-small {
+    background: linear-gradient(135deg, #a5b4fc 0%, #c084fc 50%, #22d3ee 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.dev-usn-small {
+    font-size: 0.95rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    margin: 0 0 0.85rem 0;
+    background: rgba(148, 163, 184, 0.04);
+    padding: 0.35rem 1rem;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dev-tagline-small {
+    font-size: 0.88rem;
+    color: var(--text-muted);
+    font-style: italic;
+    line-height: 1.4;
+    margin: 0 0 1rem 0;
+    text-align: center;
+    min-height: 2.8rem;
+}
+
+.dev-link-pill-small {
+    background: var(--btn-secondary-bg);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    padding: 0.5rem 1.25rem;
+    border-radius: 100px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: var(--transition);
+    text-decoration: none;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+.dev-link-pill-small:hover {
+    background: var(--primary);
+    color: white !important;
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(99, 102, 241, 0.2);
+}
+
+.dev-social-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(148, 163, 184, 0.05);
+    padding: 0.4rem 0.85rem;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+}
+
+@media (max-width: 768px) {
+    #dev-modal-overlay .dev-modal-card {
+        max-width: 90%;
+    }
+    
+    .dev-team-row {
+        flex-direction: column;
+        align-items: center;
+        gap: 2rem;
+    }
+    
+    .dev-profile-column {
+        max-width: 100%;
+    }
+    
+    .dev-tagline-small {
+        min-height: auto;
+    }
+}
+
+
 
 
 /* Mobile Responsive Overrides for Developer and Team Modals */
